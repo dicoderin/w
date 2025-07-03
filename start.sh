@@ -80,3 +80,7 @@ echo "Starting Tusky Bot..."
 echo "=== Bot Logs ==="
 
 # Run with proper error handling
+exec node index.js
+
+# If we reach here, the bot has stopped
+echo "=== Bot stopped at: $(date) ==="
