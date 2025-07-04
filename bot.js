@@ -4,10 +4,24 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import https from 'https';
+import { createWriteStream } from 'fs';
+import { promisify } from 'util';
+import stream from 'stream';
 import randomString from 'random-string';
 import chalk from 'chalk';
 import { program } from 'commander';
 import inquirer from 'inquirer';
+import extract from 'extract-zip';
+
+// Promisify stream pipeline
+const pipeline = promisify(stream.pipeline);
+
+// Mendapatkan direktori modul saat ini
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Load environment variables
 dotenv.config();
@@ -23,6 +37,8 @@ program
   .option('-c, --count <number>', 'Number of files to upload', parseInt)
   .option('-h, --headless', 'Run in headless mode')
   .option('-r, --reset', 'Reset browser session')
+  .option('-e, --extension <path>', 'Path to wallet extension')
+  .option('-s, --skip-download', 'Skip automatic wallet extension download')
   .parse(process.argv);
 
 const options = program.opts();
@@ -32,17 +48,108 @@ const CONFIG = {
   TUSKY_URL: process.env.TUSKY_URL || 'https://testnet.app.tusky.io/vaults',
   HEADLESS: options.headless || process.env.HEADLESS_MODE === 'true',
   FILE_COUNT: options.count || parseInt(process.env.FILE_COUNT) || 1,
-  USER_DATA_DIR: path.resolve('./user_data'),
-  RANDOM_FILE_DIR: path.resolve('./random_files'),
+  USER_DATA_DIR: path.resolve(__dirname, 'user_data'),
+  RANDOM_FILE_DIR: path.resolve(__dirname, 'random_files'),
   WALLET_PASSWORD: process.env.WALLET_PASSWORD,
   PRIVATE_KEY: process.env.PRIVATE_KEY,
-  EXTENSION_PATH: path.resolve('./wallet_extension') // Pastikan path ini benar
+  // Gunakan opsi CLI, lalu environment variable, lalu default
+  EXTENSION_PATH: options.extension 
+    ? path.resolve(options.extension) 
+    : process.env.EXTENSION_PATH 
+      ? path.resolve(process.env.EXTENSION_PATH)
+      : path.resolve(__dirname, 'wallet_extension'),
+  // URL untuk mengunduh ekstensi wallet
+  WALLET_DOWNLOAD_URL: 'https://storage.googleapis.com/sui-wallet-downloads/sui-wallet-v1.0.0.zip',
+  SKIP_DOWNLOAD: options.skipDownload || false
 };
 
 // Utility functions
 const ensureDir = (dirPath) => {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
+  }
+};
+
+const downloadFile = async (url, destination) => {
+  console.log(chalk.cyan(`ℹ Downloading wallet extension from ${url}...`));
+  
+  const response = await new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      if (res.statusCode !== 200) {
+        reject(new Error(`Failed to download file: ${res.statusCode} ${res.statusMessage}`));
+        return;
+      }
+      resolve(res);
+    }).on('error', reject);
+  });
+
+  const fileStream = createWriteStream(destination);
+  await pipeline(response, fileStream);
+  
+  console.log(chalk.green(`✓ Wallet extension downloaded to ${destination}`));
+};
+
+const extractZip = async (zipPath, destination) => {
+  console.log(chalk.cyan(`ℹ Extracting wallet extension to ${destination}...`));
+  
+  try {
+    await extract(zipPath, { dir: destination });
+    console.log(chalk.green(`✓ Wallet extension extracted successfully`));
+    return true;
+  } catch (error) {
+    console.error(chalk.red(`✖ Error extracting wallet extension: ${error.message}`));
+    return false;
+  }
+};
+
+const setupWalletExtension = async () => {
+  ensureDir(CONFIG.EXTENSION_PATH);
+  
+  // Cek apakah ekstensi sudah ada
+  const manifestPath = path.join(CONFIG.EXTENSION_PATH, 'manifest.json');
+  
+  if (fs.existsSync(manifestPath)) {
+    console.log(chalk.green('✓ Wallet extension found'));
+    return true;
+  }
+
+  if (CONFIG.SKIP_DOWNLOAD) {
+    console.log(chalk.yellow('ℹ Skipping wallet download'));
+    return false;
+  }
+
+  // Buat folder untuk file zip
+  const tempDir = path.join(__dirname, 'temp');
+  ensureDir(tempDir);
+  
+  const zipPath = path.join(tempDir, 'sui-wallet.zip');
+  
+  try {
+    // Unduh ekstensi wallet
+    await downloadFile(CONFIG.WALLET_DOWNLOAD_URL, zipPath);
+    
+    // Ekstrak file zip
+    const success = await extractZip(zipPath, CONFIG.EXTENSION_PATH);
+    
+    // Bersihkan file zip
+    try {
+      fs.unlinkSync(zipPath);
+      fs.rmdirSync(tempDir, { recursive: true });
+    } catch (cleanError) {
+      console.log(chalk.yellow(`ℹ Could not clean temp files: ${cleanError.message}`));
+    }
+    
+    return success;
+  } catch (error) {
+    console.error(chalk.red(`✖ Failed to setup wallet extension: ${error.message}`));
+    
+    // Tampilkan petunjuk manual
+    console.log(chalk.yellow('\nℹ Please download and extract the wallet extension manually:'));
+    console.log(chalk.yellow('1. Download from: https://chromewebstore.google.com/detail/slush-%E2%80%94-a-sui-wallet/opcgpfmipidbgpenhmajoajpbobppdil'));
+    console.log(chalk.yellow('2. Extract the extension to:', CONFIG.EXTENSION_PATH));
+    console.log(chalk.yellow('3. Rerun this script with --skip-download to use the manual installation'));
+    
+    return false;
   }
 };
 
@@ -64,23 +171,41 @@ const resetSession = () => {
   } else {
     console.log(chalk.yellow('ℹ No existing session found'));
   }
+  
+  // Reset folder file acak
+  if (fs.existsSync(CONFIG.RANDOM_FILE_DIR)) {
+    fs.rmSync(CONFIG.RANDOM_FILE_DIR, { recursive: true, force: true });
+    console.log(chalk.green('✓ Random files directory reset'));
+  }
 };
 
 const validateConfig = () => {
+  const errors = [];
+  
   if (!CONFIG.PRIVATE_KEY) {
-    console.log(chalk.red('✖ Error: PRIVATE_KEY is not defined in .env file'));
-    process.exit(1);
+    errors.push('PRIVATE_KEY is not defined in .env file');
   }
   
   if (!CONFIG.WALLET_PASSWORD) {
-    console.log(chalk.red('✖ Error: WALLET_PASSWORD is not defined in .env file'));
-    process.exit(1);
+    errors.push('WALLET_PASSWORD is not defined in .env file');
   }
 
   // Validasi ekstensi wallet
-  if (!fs.existsSync(CONFIG.EXTENSION_PATH)) {
-    console.log(chalk.red(`✖ Error: Wallet extension not found at ${CONFIG.EXTENSION_PATH}`));
-    process.exit(1);
+  const manifestPath = path.join(CONFIG.EXTENSION_PATH, 'manifest.json');
+  if (!fs.existsSync(manifestPath)) {
+    errors.push(`Wallet extension not found at ${CONFIG.EXTENSION_PATH}`);
+  }
+  
+  if (errors.length > 0) {
+    console.log(chalk.red.bold('\n✖ Configuration errors:'));
+    errors.forEach(error => console.log(chalk.red(`- ${error}`)));
+    console.log(chalk.yellow('\nℹ Solutions:'));
+    console.log(chalk.yellow('1. Create a .env file with PRIVATE_KEY and WALLET_PASSWORD'));
+    console.log(chalk.yellow('2. Run without --skip-download to automatically download wallet extension'));
+    console.log(chalk.yellow('3. Or download manually from:'));
+    console.log(chalk.yellow('   https://chromewebstore.google.com/detail/slush-%E2%80%94-a-sui-wallet/opcgpfmipidbgpenhmajoajpbobppdil'));
+    console.log(chalk.yellow(`4. Extract to: ${CONFIG.EXTENSION_PATH}`));
+    return false;
   }
   
   return true;
@@ -92,15 +217,15 @@ const importWallet = async (page) => {
   await page.goto('chrome-extension://opcgpfmipidbgpenhmajoajpbobppdil/ui.html#/welcome');
   
   // Click import existing wallet
-  await page.waitForSelector('button:has-text("Import an existing wallet")');
+  await page.waitForSelector('button:has-text("Import an existing wallet")', { timeout: 10000 });
   await page.click('button:has-text("Import an existing wallet")');
   
   // Agree to terms
-  await page.waitForSelector('button:has-text("I agree")');
+  await page.waitForSelector('button:has-text("I agree")', { timeout: 5000 });
   await page.click('button:has-text("I agree")');
   
   // Enter private key
-  await page.waitForSelector('textarea[name="importedPrivateKey"]');
+  await page.waitForSelector('textarea[name="importedPrivateKey"]', { timeout: 5000 });
   await page.type('textarea[name="importedPrivateKey"]', CONFIG.PRIVATE_KEY);
   
   // Set password
@@ -147,6 +272,8 @@ const connectToTusky = async (page) => {
     await walletPage.waitForSelector('button:has-text("Connect")', { timeout: 10000 });
     await walletPage.click('button:has-text("Connect")');
     await page.bringToFront();
+  } else {
+    console.log(chalk.yellow('ℹ Wallet popup not found, check if extension is loaded'));
   }
   
   console.log(chalk.green('✓ Wallet connected to Tusky'));
@@ -215,9 +342,7 @@ const uploadFile = async (page, filePath) => {
 const findChrome = async () => {
   try {
     // Coba dapatkan executablePath dari puppeteer
-    const chromium = await import('puppeteer-extra').then(pkg => 
-      pkg.default.executablePath()
-    );
+    const chromium = await puppeteer.executablePath();
     return chromium;
   } catch (error) {
     console.log(chalk.yellow('ℹ Using system Chrome'));
@@ -232,10 +357,22 @@ const main = async () => {
     return;
   }
 
-  // Validate configuration
-  validateConfig();
-  
+  // Setup wallet extension
   console.log(chalk.blue.bold('\n🚀 Starting Tusky Autobot\n'));
+  console.log(chalk.cyan(`ℹ Wallet extension path: ${CONFIG.EXTENSION_PATH}`));
+  
+  const extensionReady = await setupWalletExtension();
+  
+  if (!extensionReady) {
+    console.log(chalk.red('✖ Wallet extension not ready. Exiting.'));
+    process.exit(1);
+  }
+
+  // Validate configuration
+  if (!validateConfig()) {
+    process.exit(1);
+  }
+  
   console.log(chalk.cyan(`ℹ Mode: ${CONFIG.HEADLESS ? 'Headless' : 'Visible'}`));
   console.log(chalk.cyan(`ℹ Files to upload: ${CONFIG.FILE_COUNT}`));
 
@@ -270,6 +407,8 @@ const main = async () => {
     console.log(chalk.yellow('ℹ Chrome executable not found, using system default'));
   }
 
+  console.log(chalk.cyan('ℹ Launching browser...'));
+  
   // Launch browser
   const browser = await puppeteer.launch(browserConfig);
 
@@ -278,6 +417,7 @@ const main = async () => {
     const page = pages[0] || await browser.newPage();
 
     // Import wallet if not already done
+    console.log(chalk.cyan('ℹ Setting up wallet...'));
     const walletPage = await browser.newPage();
     await importWallet(walletPage);
     await walletPage.close();
@@ -289,6 +429,7 @@ const main = async () => {
     await createVault(page);
     
     // Upload files
+    console.log(chalk.cyan('ℹ Starting file uploads...'));
     for (let i = 1; i <= CONFIG.FILE_COUNT; i++) {
       const filePath = generateRandomFile();
       await uploadFile(page, filePath);
