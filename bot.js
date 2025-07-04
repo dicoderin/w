@@ -229,7 +229,8 @@ const main = async () => {
       '--load-extension=./wallet_extension'
     ],
     ignoreHTTPSErrors: true,
-    defaultViewport: null
+    defaultViewport: null,
+    executablePath: process.env.CHROME_BIN || null // Gunakan chrome yang tersedia di sistem
   });
 
   try {
@@ -257,15 +258,23 @@ const main = async () => {
     console.log(chalk.green.bold('\n✅ All operations completed successfully!'));
   } catch (error) {
     console.error(chalk.red.bold('\n✖ Error occurred:'));
-    console.error(chalk.red(error.message));
+    console.error(chalk.red(error.stack || error.message));
     
     const pages = await browser.pages();
     for (const p of pages) {
-      await p.screenshot({ path: `error-${Date.now()}.png`, fullPage: true });
+      try {
+        await p.screenshot({ path: `error-${Date.now()}.png`, fullPage: true });
+      } catch (screenshotError) {
+        console.error(chalk.red('Failed to take screenshot:', screenshotError.message));
+      }
     }
     console.log(chalk.yellow('ℹ Screenshots saved for debugging'));
   } finally {
-    await browser.close();
+    try {
+      await browser.close();
+    } catch (browserCloseError) {
+      console.error(chalk.red('Error closing browser:', browserCloseError.message));
+    }
   }
 };
 
