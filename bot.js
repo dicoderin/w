@@ -35,7 +35,8 @@ const CONFIG = {
   USER_DATA_DIR: path.resolve('./user_data'),
   RANDOM_FILE_DIR: path.resolve('./random_files'),
   WALLET_PASSWORD: process.env.WALLET_PASSWORD,
-  PRIVATE_KEY: process.env.PRIVATE_KEY
+  PRIVATE_KEY: process.env.PRIVATE_KEY,
+  EXTENSION_PATH: path.resolve('./wallet_extension') // Pastikan path ini benar
 };
 
 // Utility functions
@@ -75,6 +76,12 @@ const validateConfig = () => {
     console.log(chalk.red('✖ Error: WALLET_PASSWORD is not defined in .env file'));
     process.exit(1);
   }
+
+  // Validasi ekstensi wallet
+  if (!fs.existsSync(CONFIG.EXTENSION_PATH)) {
+    console.log(chalk.red(`✖ Error: Wallet extension not found at ${CONFIG.EXTENSION_PATH}`));
+    process.exit(1);
+  }
   
   return true;
 };
@@ -104,8 +111,12 @@ const importWallet = async (page) => {
   await page.click('button:has-text("Import")');
   
   // Wait for import to complete
-  await page.waitForSelector('div:has-text("Wallet created successfully")', { timeout: 10000 });
-  console.log(chalk.green('✓ Wallet imported successfully'));
+  try {
+    await page.waitForSelector('div:has-text("Wallet created successfully")', { timeout: 15000 });
+    console.log(chalk.green('✓ Wallet imported successfully'));
+  } catch (error) {
+    console.log(chalk.yellow('ℹ Wallet might already be imported'));
+  }
 };
 
 const connectToTusky = async (page) => {
@@ -116,11 +127,11 @@ const connectToTusky = async (page) => {
   });
 
   // Connect wallet
-  await page.waitForSelector('button:has-text("Connect Wallet")', { timeout: 15000 });
+  await page.waitForSelector('button:has-text("Connect Wallet")', { timeout: 30000 });
   await page.click('button:has-text("Connect Wallet")');
   
   // Select Sui Wallet
-  await page.waitForSelector('.wallet-option', { timeout: 10000 });
+  await page.waitForSelector('.wallet-option', { timeout: 15000 });
   await page.evaluate(() => {
     const wallets = [...document.querySelectorAll('.wallet-option')];
     const suiWallet = wallets.find(w => w.textContent.includes('Sui Wallet'));
@@ -133,7 +144,7 @@ const connectToTusky = async (page) => {
   
   if (walletPage) {
     await walletPage.bringToFront();
-    await walletPage.waitForSelector('button:has-text("Connect")', { timeout: 5000 });
+    await walletPage.waitForSelector('button:has-text("Connect")', { timeout: 10000 });
     await walletPage.click('button:has-text("Connect")');
     await page.bringToFront();
   }
@@ -155,12 +166,12 @@ const createVault = async (page) => {
     
     if (walletPage) {
       await walletPage.bringToFront();
-      await walletPage.waitForSelector('button:has-text("Approve")', { timeout: 5000 });
+      await walletPage.waitForSelector('button:has-text("Approve")', { timeout: 10000 });
       await walletPage.click('button:has-text("Approve")');
       await page.bringToFront();
     }
     
-    await page.waitForSelector('div:has-text("Vault created successfully")', { timeout: 15000 });
+    await page.waitForSelector('div:has-text("Vault created successfully")', { timeout: 30000 });
     console.log(chalk.green('✓ Vault created successfully'));
   } catch (error) {
     console.log(chalk.yellow('ℹ Using existing vault'));
@@ -170,15 +181,15 @@ const createVault = async (page) => {
 const uploadFile = async (page, filePath) => {
   console.log(chalk.cyan(`⏳ Uploading file: ${path.basename(filePath)}`));
   
-  await page.waitForSelector('button:has-text("Upload")', { timeout: 10000 });
+  await page.waitForSelector('button:has-text("Upload")', { timeout: 15000 });
   await page.click('button:has-text("Upload")');
   
   // Select file
-  const input = await page.waitForSelector('input[type="file"]', { timeout: 5000 });
+  const input = await page.waitForSelector('input[type="file"]', { timeout: 10000 });
   await input.uploadFile(filePath);
   
   // Confirm upload
-  await page.waitForSelector('button:has-text("Upload File")', { timeout: 5000 });
+  await page.waitForSelector('button:has-text("Upload File")', { timeout: 10000 });
   await page.click('button:has-text("Upload File")');
   
   // Confirm transaction in wallet
@@ -187,14 +198,31 @@ const uploadFile = async (page, filePath) => {
   
   if (walletPage) {
     await walletPage.bringToFront();
-    await walletPage.waitForSelector('button:has-text("Approve")', { timeout: 5000 });
+    await walletPage.waitForSelector('button:has-text("Approve")', { timeout: 15000 });
     await walletPage.click('button:has-text("Approve")');
     await page.bringToFront();
   }
   
   // Wait for success
-  await page.waitForSelector('.MuiAlert-filledSuccess', { timeout: 30000 });
-  console.log(chalk.green(`✓ File uploaded successfully: ${path.basename(filePath)}`));
+  try {
+    await page.waitForSelector('.MuiAlert-filledSuccess', { timeout: 45000 });
+    console.log(chalk.green(`✓ File uploaded successfully: ${path.basename(filePath)}`));
+  } catch (error) {
+    console.log(chalk.yellow('ℹ Success indicator not found, assuming upload succeeded'));
+  }
+};
+
+const findChrome = async () => {
+  try {
+    // Coba dapatkan executablePath dari puppeteer
+    const chromium = await import('puppeteer-extra').then(pkg => 
+      pkg.default.executablePath()
+    );
+    return chromium;
+  } catch (error) {
+    console.log(chalk.yellow('ℹ Using system Chrome'));
+    return null;
+  }
 };
 
 const main = async () => {
@@ -215,8 +243,11 @@ const main = async () => {
   ensureDir(CONFIG.USER_DATA_DIR);
   ensureDir(CONFIG.RANDOM_FILE_DIR);
 
-  // Launch browser
-  const browser = await puppeteer.launch({
+  // Dapatkan path Chrome secara otomatis
+  const chromeExecutable = await findChrome();
+
+  // Konfigurasi browser
+  const browserConfig = {
     headless: CONFIG.HEADLESS,
     userDataDir: CONFIG.USER_DATA_DIR,
     args: [
@@ -225,13 +256,22 @@ const main = async () => {
       '--disable-dev-shm-usage',
       '--disable-web-security',
       '--disable-features=IsolateOrigins,site-per-process',
-      '--disable-extensions-except=./wallet_extension',
-      '--load-extension=./wallet_extension'
+      `--disable-extensions-except=${CONFIG.EXTENSION_PATH}`,
+      `--load-extension=${CONFIG.EXTENSION_PATH}`
     ],
     ignoreHTTPSErrors: true,
-    defaultViewport: null,
-    executablePath: process.env.CHROME_BIN || null // Gunakan chrome yang tersedia di sistem
-  });
+    defaultViewport: null
+  };
+
+  // Tambahkan executablePath jika ditemukan
+  if (chromeExecutable) {
+    browserConfig.executablePath = chromeExecutable;
+  } else {
+    console.log(chalk.yellow('ℹ Chrome executable not found, using system default'));
+  }
+
+  // Launch browser
+  const browser = await puppeteer.launch(browserConfig);
 
   try {
     const pages = await browser.pages();
@@ -261,14 +301,15 @@ const main = async () => {
     console.error(chalk.red(error.stack || error.message));
     
     const pages = await browser.pages();
-    for (const p of pages) {
+    for (const [index, p] of pages.entries()) {
       try {
-        await p.screenshot({ path: `error-${Date.now()}.png`, fullPage: true });
+        const screenshotPath = `error-${Date.now()}-${index}.png`;
+        await p.screenshot({ path: screenshotPath, fullPage: true });
+        console.log(chalk.yellow(`ℹ Screenshot saved: ${screenshotPath}`));
       } catch (screenshotError) {
         console.error(chalk.red('Failed to take screenshot:', screenshotError.message));
       }
     }
-    console.log(chalk.yellow('ℹ Screenshots saved for debugging'));
   } finally {
     try {
       await browser.close();
