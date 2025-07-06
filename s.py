@@ -21,8 +21,8 @@ import ipaddress
 import tldextract
 import dns.resolver
 from datetime import datetime
-from Cryptodome.Cipher import AES
-from Cryptodome.Util.Padding import pad, unpad
+from Crypto.Cipher import AES  # Fixed import
+from Crypto.Util.Padding import pad, unpad  # Fixed import
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -36,14 +36,14 @@ STEALTH_MODE = True
 QUANTUM_ENTANGLEMENT_FACTOR = 0.87
 ANTI_FORENSICS_LEVEL = 9
 
-# Custom Banner
+# Custom Banner with "AllowMe"
 BANNER = f"""
-██████╗ ██╗     ██╗   ██╗██████╗ ███╗   ███╗███████╗
-██╔══██╗██║     ██║   ██║██╔══██╗████╗ ████║██╔════╝
-██████╔╝██║     ██║   ██║██████╔╝██╔████╔██║█████╗  
-██╔═══╝ ██║     ██║   ██║██╔══██╗██║╚██╔╝██║██╔══╝  
-██║     ███████╗╚██████╔╝██████╔╝██║ ╚═╝ ██║███████╗
-╚═╝     ╚══════╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝
+ █████╗ ██╗      ██╗      ███╗   ███╗ ██████╗ ███████╗
+██╔══██╗██║      ██║      ████╗ ████║██╔═══██╗██╔════╝
+███████║██║      ██║      ██╔████╔██║██║   ██║█████╗  
+██╔══██║██║      ██║      ██║╚██╔╝██║██║   ██║██╔══╝  
+██║  ██║███████╗ ███████╗ ██║ ╚═╝ ██║╚██████╔╝███████╗
+╚═╝  ╚═╝╚══════╝ ╚══════╝ ╚═╝     ╚═╝ ╚═════╝ ╚══════╝
 -----------------------------------------------------
 | AllowMe Elite Hacking Suite v12.1                |
 | Quantum-Level Penetration Testing Framework      |
@@ -272,7 +272,7 @@ class CyberRecon:
         
         def scan_port(port, index):
             try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 sock.settimeout(0.3)
                 result = sock.connect_ex((self.ip, port))
                 if result == 0:
