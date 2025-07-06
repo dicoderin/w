@@ -436,7 +436,7 @@ class CyberRecon:
         if random.random() > 0.4:
             vuln = "CVE-2025-3094: Holographic Interface RCE"
             vulns.append(vuln)
-            self.data_exfiltrator.add_vulnerability(vunln)
+            self.data_exfiltrator.add_vulnerability(vuln)
             
         if random.random() > 0.6:
             vuln = "CVE-2025-3400: Quantum Cloud Escape Vulnerability"
@@ -470,14 +470,23 @@ class JSValidatorHacker:
             options.add_experimental_option("excludeSwitches", ["enable-automation"])
             options.add_experimental_option('useAutomationExtension', False)
             
-            driver = webdriver.Chrome(options=options)
-            driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-            CHROME_DRIVER = driver
+            try:
+                driver = webdriver.Chrome(options=options)
+                driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+                CHROME_DRIVER = driver
+            except Exception as e:
+                print(f"\033[91m[!] ChromeDriver error: {str(e)}\033[0m")
+                print("\033[93m[!] Continuing without browser automation...\033[0m")
+                return None
             
         return CHROME_DRIVER
         
     def disable_js_validation(self, url):
         """Disable JavaScript entirely in browser context"""
+        if not self.driver:
+            print("\033[91m[!] Browser not initialized. Skipping JS validation bypass\033[0m")
+            return False
+            
         print("\n[+] Disabling JavaScript validation completely")
         try:
             self.driver.get(url)
@@ -490,6 +499,10 @@ class JSValidatorHacker:
             
     def modify_js_realtime(self, url, function_name):
         """Modify JavaScript code in real-time to remove validation"""
+        if not self.driver:
+            print("\033[91m[!] Browser not initialized. Skipping JS modification\033[0m")
+            return False
+            
         print(f"\n[+] Real-time JavaScript modification: {function_name}")
         try:
             self.driver.get(url)
@@ -505,7 +518,7 @@ class JSValidatorHacker:
             print(f"  \033[92m!!! Validation function {function_name} overridden!\033[0m")
             return True
         except Exception as e:
-            print(f"  \033[91mError: {str(e)}\033[0m")
+            print(f"  \033极客91mError: {str(e)}\033[0m")
             return False
             
     def override_validation_console(self, url, function_name):
@@ -520,6 +533,10 @@ class JSValidatorHacker:
         
     def exploit_dom_vulnerabilities(self, url):
         """Exploit DOM-based vulnerabilities"""
+        if not self.driver:
+            print("\033[91m[!] Browser not initialized. Skipping DOM exploit\033[0m")
+            return False
+            
         print(f"\n[+] Exploiting DOM vulnerabilities: {url}")
         try:
             self.driver.get(url)
@@ -548,6 +565,10 @@ class JSValidatorHacker:
             
     def automatic_form_submission(self, url, payload):
         """Bypass validation and submit form automatically"""
+        if not self.driver:
+            print("\033[91m[!] Browser not initialized. Skipping form submission\033[0m")
+            return False
+            
         print(f"\n[+] Automatic form submission bypass: {url}")
         try:
             self.driver.get(url)
@@ -572,7 +593,7 @@ class JSValidatorHacker:
             print(f"  \033[91mError: {str(e)}\033[0m")
             return False
             
-    def generate_form_filler_js(self, payload):
+    def generate_form极客filler_js(self, payload):
         """Generate JS code to fill form fields"""
         js_code = ""
         for field, value in payload.items():
@@ -731,7 +752,7 @@ class WebHunter:
         try:
             res = self.session.get(test_url, timeout=3, verify=False)
             if res.status_code == 200 and "admin" in res.text:
-                print("    \033[92m!!! IDOR vulnerability found!\033[0m")
+                print("    \033[92m!!! IDOR vulnerability found!\033[0极客")
                 self.data_exfiltrator.add_vulnerability(f"IDOR Vulnerability at {test_url}")
         except:
             pass
@@ -882,7 +903,8 @@ class WebHunter:
         
         # Capture page before exploitation
         self.data_exfiltrator.capture_page_content(login_url)
-        self.data_exfiltrator.capture_screenshot(login_url)
+        if CHROME_DRIVER:
+            self.data_exfiltrator.capture_screenshot(login_url)
         
         # Strategi 1: Nonaktifkan JavaScript sepenuhnya
         self.js_hacker.disable_js_validation(login_url)
@@ -907,7 +929,8 @@ class WebHunter:
         
         # Capture page after exploitation
         self.data_exfiltrator.capture_page_content(login_url)
-        self.data_exfiltrator.capture_screenshot(login_url)
+        if CHROME_DRIVER:
+            self.data_exfiltrator.capture_screenshot(login_url)
         
         # Simulasi bypass berhasil
         print("\n  \033[92m[+] JavaScript validation completely bypassed!")
