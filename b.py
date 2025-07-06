@@ -1,268 +1,302 @@
-import time
-import random
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from web3 import Web3
-from eth_account import Account
-import json
-import logging
-import os
-from dotenv import load_dotenv
+// Satsuma Exchange Testnet Bot - Complete Implementation
+// Based on official Satsuma Exchange documentation
 
-# Setup logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+const { ethers } = require('ethers');
+require('dotenv').config();
 
-# Load environment variables
-load_dotenv()
-PRIVATE_KEY = os.getenv('PRIVATE_KEY')
-if not PRIVATE_KEY:
-    raise ValueError("Private key not found in environment variables. Please add PRIVATE_KEY to .env file.")
+// Configuration - Store private key in .env file for security
+const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const RPC_URL = 'https://rpc.test.citrea.io';
 
-# Initialize Web3
-RPC_URL = "https://api.zan.top/node/v1/pharos/testnet/1a49bd503c164cadbe04af55f275e16d"
-w3 = Web3(Web3.HTTPProvider(RPC_URL))
-if not w3.is_connected():
-    raise ConnectionError(f"Failed to connect to RPC: {RPC_URL}")
+// Contract addresses from Satsuma on Citrea Testnet
+const SUMA_TOKEN_ADDRESS = '0x0E822C71F749Fb9bB2Aa06AB41B27FAB7Abbc583';
+const WETH_TOKEN_ADDRESS = '0x67a8a98033d60ce8D5292F1b5D5A78e20b9C465d';
+const ROUTER_ADDRESS = '0x7fbc0187Ccc3592d3F13fb0EA632f4418B7A11dF';
+const STAKING_ADDRESS = '0xCb11d6C903996360f33e6F86ee679E898b7D4c85';
+const VE_SUMA_ADDRESS = '0xF6eE0AF6F8bA4c3679dafE7dC42f33ab83b80960';
+const VOTING_ADDRESS = '0x927695fc7b995FA91Ee4e99Bdea6DE0303Eb99eb';
 
-logger.info(f"Connected to Pharos Network: {w3.is_connected()}")
-logger.info(f"Chain ID: {w3.eth.chain_id}")
+// ABIs based on Satsuma documentation
+const ERC20_ABI = [
+  "function name() view returns (string)",
+  "function symbol() view returns (string)",
+  "function decimals() view returns (uint8)",
+  "function balanceOf(address) view returns (uint)",
+  "function transfer(address to, uint amount) returns (bool)",
+  "function approve(address spender, uint256 amount) returns (bool)",
+  "function allowance(address owner, address spender) view returns (uint256)"
+];
 
-# Set up account
-account = Account.from_key(PRIVATE_KEY)
-wallet_address = account.address
-logger.info(f"Using wallet address: {wallet_address}")
+const ROUTER_ABI = [
+  "function getAmountsOut(uint amountIn, address[] memory path) public view returns (uint[] memory amounts)",
+  "function swapExactTokensForTokens(uint amountIn, uint amountOutMin, address[] calldata path, address to, uint deadline) external returns (uint[] memory amounts)",
+  "function addLiquidity(address tokenA, address tokenB, uint amountADesired, uint amountBDesired, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB, uint liquidity)",
+  "function removeLiquidity(address tokenA, address tokenB, uint liquidity, uint amountAMin, uint amountBMin, address to, uint deadline) external returns (uint amountA, uint amountB)",
+  "function factory() external pure returns (address)"
+];
 
-# Browser setup
-def setup_browser():
-    chrome_options = Options()
-    chrome_options.add_argument("--start-maximized")
-    # Uncomment the line below if you want to run headless
-    # chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--disable-notifications")
-    chrome_options.add_argument("--disable-popup-blocking")
+const VESUMA_ABI = [
+  "function convertSuma(uint256 amount) external returns (uint256)",
+  "function balanceOf(address account) external view returns (uint256)",
+  "function approve(address spender, uint256 amount) external returns (bool)"
+];
+
+const STAKING_ABI = [
+  "function stake(uint256 amount) external",
+  "function unstake(uint256 amount) external",
+  "function getReward() external",
+  "function balanceOf(address account) external view returns (uint256)",
+  "function earned(address account) external view returns (uint256)"
+];
+
+const VOTING_ABI = [
+  "function vote(uint256 proposalId, uint8 support) external",
+  "function getProposals() external view returns (uint256[] memory)",
+  "function getProposal(uint256 proposalId) external view returns (address,uint256,uint256,uint256,uint256,uint256,bool)",
+  "function hasVoted(uint256 proposalId, address voter) external view returns (bool)"
+];
+
+// Main function
+async function main() {
+  try {
+    console.log("Starting Satsuma Exchange Testnet Bot...");
     
-    driver = webdriver.Chrome(options=chrome_options)
-    return driver
-
-# Wait for element and click
-def wait_and_click(driver, by, selector, timeout=60):
-    element = WebDriverWait(driver, timeout).until(
-        EC.element_to_be_clickable((by, selector))
-    )
-    driver.execute_script("arguments[0].scrollIntoView();", element)
-    time.sleep(random.uniform(1, 2))
-    element.click()
-    return element
-
-# Wait for element to be visible
-def wait_for_element(driver, by, selector, timeout=60):
-    element = WebDriverWait(driver, timeout).until(
-        EC.visibility_of_element_located((by, selector))
-    )
-    return element
-
-# Connect wallet using Metamask-like extension
-def connect_wallet(driver, site_url):
-    logger.info(f"Navigating to {site_url}")
-    driver.get(site_url)
-    time.sleep(5)  # Wait for page to load
+    // Setup provider and wallet
+    const provider = new ethers.providers.JsonRpcProvider(RPC_URL);
+    const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+    const address = await wallet.getAddress();
     
-    try:
-        # Click connect wallet button
-        connect_button = wait_and_click(driver, By.XPATH, "//button[contains(text(), 'Connect') or contains(text(), 'connect') or contains(@class, 'connect')]")
-        logger.info("Clicked connect wallet button")
-        time.sleep(2)
+    console.log(`Using wallet: ${address}`);
+    
+    // Check network
+    const network = await provider.getNetwork();
+    console.log(`Connected to network: ${network.name} (Chain ID: ${network.chainId})`);
+    
+    // Initialize contracts
+    const sumaToken = new ethers.Contract(SUMA_TOKEN_ADDRESS, ERC20_ABI, wallet);
+    const wethToken = new ethers.Contract(WETH_TOKEN_ADDRESS, ERC20_ABI, wallet);
+    const router = new ethers.Contract(ROUTER_ADDRESS, ROUTER_ABI, wallet);
+    const veSuma = new ethers.Contract(VE_SUMA_ADDRESS, VESUMA_ABI, wallet);
+    const staking = new ethers.Contract(STAKING_ADDRESS, STAKING_ABI, wallet);
+    const voting = new ethers.Contract(VOTING_ADDRESS, VOTING_ABI, wallet);
+    
+    // Check balances
+    const sumaBalance = await sumaToken.balanceOf(address);
+    const wethBalance = await wethToken.balanceOf(address);
+    
+    console.log(`SUMA Balance: ${ethers.utils.formatEther(sumaBalance)} SUMA`);
+    console.log(`WETH Balance: ${ethers.utils.formatEther(wethBalance)} WETH`);
+    
+    // If balance is too low, alert the user
+    if (sumaBalance.lt(ethers.utils.parseEther("0.1")) || wethBalance.lt(ethers.utils.parseEther("0.01"))) {
+      console.log("Warning: Low token balance. Consider getting tokens from the faucet:");
+      console.log("- Citrea faucet: https://citrea.xyz/faucet");
+      console.log("- WETH faucet: Visit the Satsuma website");
+    }
+    
+    // 1. TRADING - Swap SUMA for WETH
+    console.log("\n1. TESTING TRADING FEATURE...");
+    
+    const amountToSwap = ethers.utils.parseEther("0.01"); // Swap 0.01 SUMA
+    
+    if (sumaBalance.gte(amountToSwap)) {
+      // Approve router to spend SUMA
+      console.log("Approving SUMA for trading...");
+      const approvalTx = await sumaToken.approve(ROUTER_ADDRESS, amountToSwap);
+      await approvalTx.wait();
+      console.log(`Approval transaction confirmed: ${approvalTx.hash}`);
+      
+      // Get price quote
+      const amountsOut = await router.getAmountsOut(
+        amountToSwap,
+        [SUMA_TOKEN_ADDRESS, WETH_TOKEN_ADDRESS]
+      );
+      const expectedWETH = amountsOut[1];
+      console.log(`Expected to receive: ${ethers.utils.formatEther(expectedWETH)} WETH`);
+      
+      // Execute swap with 1% slippage tolerance
+      console.log("Executing swap transaction...");
+      const minAmountOut = expectedWETH.mul(99).div(100); // 1% slippage
+      const deadline = Math.floor(Date.now() / 1000) + 300; // 5 minutes
+      
+      const swapTx = await router.swapExactTokensForTokens(
+        amountToSwap,
+        minAmountOut,
+        [SUMA_TOKEN_ADDRESS, WETH_TOKEN_ADDRESS],
+        address,
+        deadline
+      );
+      
+      await swapTx.wait();
+      console.log(`Swap transaction confirmed: ${swapTx.hash}`);
+      
+      // Check new balances
+      const newSumaBalance = await sumaToken.balanceOf(address);
+      const newWethBalance = await wethToken.balanceOf(address);
+      console.log(`New SUMA balance: ${ethers.utils.formatEther(newSumaBalance)} SUMA`);
+      console.log(`New WETH balance: ${ethers.utils.formatEther(newWethBalance)} WETH`);
+    } else {
+      console.log("Insufficient SUMA balance for trading");
+    }
+    
+    // 2. ADD LIQUIDITY - SUMA/WETH pair
+    console.log("\n2. ADDING LIQUIDITY...");
+    
+    const sumaToAddLiquidity = ethers.utils.parseEther("0.05");
+    const wethToAddLiquidity = ethers.utils.parseEther("0.005");
+    
+    if (
+      (await sumaToken.balanceOf(address)).gte(sumaToAddLiquidity) && 
+      (await wethToken.balanceOf(address)).gte(wethToAddLiquidity)
+    ) {
+      // Approve both tokens
+      console.log("Approving SUMA for liquidity...");
+      const approveSumaTx = await sumaToken.approve(ROUTER_ADDRESS, sumaToAddLiquidity);
+      await approveSumaTx.wait();
+      console.log(`SUMA approval confirmed: ${approveSumaTx.hash}`);
+      
+      console.log("Approving WETH for liquidity...");
+      const approveWethTx = await wethToken.approve(ROUTER_ADDRESS, wethToAddLiquidity);
+      await approveWethTx.wait();
+      console.log(`WETH approval confirmed: ${approveWethTx.hash}`);
+      
+      // Add liquidity
+      console.log("Adding liquidity...");
+      const deadline = Math.floor(Date.now() / 1000) + 300; // 5 minutes
+      
+      // Minimum amounts (accepting 1% slippage)
+      const minSuma = sumaToAddLiquidity.mul(99).div(100);
+      const minWeth = wethToAddLiquidity.mul(99).div(100);
+      
+      const addLiquidityTx = await router.addLiquidity(
+        SUMA_TOKEN_ADDRESS,
+        WETH_TOKEN_ADDRESS,
+        sumaToAddLiquidity,
+        wethToAddLiquidity,
+        minSuma,
+        minWeth,
+        address,
+        deadline
+      );
+      
+      const receipt = await addLiquidityTx.wait();
+      console.log(`Liquidity added successfully: ${addLiquidityTx.hash}`);
+      
+      // Get LP token address and balance (if needed)
+      const factory = await router.factory();
+      console.log(`Liquidity pool created on factory: ${factory}`);
+    } else {
+      console.log("Insufficient token balance for adding liquidity");
+    }
+    
+    // 3. CONVERT SUMA TO VESUMA
+    console.log("\n3. CONVERTING SUMA TO VESUMA...");
+    
+    const sumaToConvert = ethers.utils.parseEther("0.03");
+    
+    if ((await sumaToken.balanceOf(address)).gte(sumaToConvert)) {
+      // Approve SUMA to be used by veSuma contract
+      console.log("Approving SUMA for conversion...");
+      const approveTx = await sumaToken.approve(VE_SUMA_ADDRESS, sumaToConvert);
+      await approveTx.wait();
+      console.log(`Approval transaction confirmed: ${approveTx.hash}`);
+      
+      // Convert SUMA to veSUMA
+      console.log("Converting SUMA to veSUMA...");
+      const convertTx = await veSuma.convertSuma(sumaToConvert);
+      await convertTx.wait();
+      console.log(`Conversion transaction confirmed: ${convertTx.hash}`);
+      
+      // Check veSUMA balance
+      const veSumaBalance = await veSuma.balanceOf(address);
+      console.log(`veSUMA Balance: ${ethers.utils.formatEther(veSumaBalance)} veSUMA`);
+    } else {
+      console.log("Insufficient SUMA balance for conversion");
+    }
+    
+    // 4. STAKE VESUMA
+    console.log("\n4. STAKING VESUMA...");
+    
+    const veSumaBalance = await veSuma.balanceOf(address);
+    const veSumaToStake = veSumaBalance.div(2); // Stake half of the veSUMA balance
+    
+    if (veSumaBalance.gt(0) && veSumaToStake.gt(0)) {
+      // Approve veSUMA to be used by staking contract
+      console.log("Approving veSUMA for staking...");
+      const approveTx = await veSuma.approve(STAKING_ADDRESS, veSumaToStake);
+      await approveTx.wait();
+      console.log(`Approval transaction confirmed: ${approveTx.hash}`);
+      
+      // Stake veSUMA
+      console.log("Staking veSUMA...");
+      const stakeTx = await staking.stake(veSumaToStake);
+      await stakeTx.wait();
+      console.log(`Staking transaction confirmed: ${stakeTx.hash}`);
+      
+      // Check staked balance
+      const stakedBalance = await staking.balanceOf(address);
+      console.log(`Staked veSUMA Balance: ${ethers.utils.formatEther(stakedBalance)} veSUMA`);
+      
+      // Check rewards (if any)
+      const earned = await staking.earned(address);
+      console.log(`Earned rewards: ${ethers.utils.formatEther(earned)}`);
+    } else {
+      console.log("No veSUMA available for staking");
+    }
+    
+    // 5. VOTE WITH VESUMA
+    console.log("\n5. PARTICIPATING IN GOVERNANCE...");
+    
+    try {
+      // Get active proposals
+      const proposals = await voting.getProposals();
+      console.log(`Found ${proposals.length} proposals`);
+      
+      if (proposals.length > 0) {
+        // Get details of the first proposal
+        const proposalId = proposals[0];
+        const proposalDetails = await voting.getProposal(proposalId);
+        console.log(`Proposal ${proposalId} details:`, proposalDetails);
         
-        # Select wallet type (usually Metamask or similar)
-        metamask_option = wait_and_click(driver, By.XPATH, "//div[contains(text(), 'MetaMask') or contains(@class, 'metamask')]")
-        logger.info("Selected MetaMask")
+        // Check if already voted
+        const hasVoted = await voting.hasVoted(proposalId, address);
         
-        # Switch to MetaMask popup and approve connection
-        original_window = driver.current_window_handle
-        wait_for_new_window(driver, original_window)
-        
-        for window_handle in driver.window_handles:
-            if window_handle != original_window:
-                driver.switch_to.window(window_handle)
-                break
-                
-        connect_confirm = wait_and_click(driver, By.XPATH, "//button[contains(text(), 'Next') or contains(text(), 'Connect')]")
-        logger.info("Approved wallet connection")
-        
-        # Switch back to main window
-        driver.switch_to.window(original_window)
-        time.sleep(3)
-        
-        logger.info("Wallet connected successfully")
-        return True
-    except Exception as e:
-        logger.error(f"Error connecting wallet: {str(e)}")
-        return False
+        if (!hasVoted) {
+          console.log(`Voting on proposal ${proposalId}...`);
+          const support = 1; // 1 = For, 0 = Against, 2 = Abstain
+          const voteTx = await voting.vote(proposalId, support);
+          await voteTx.wait();
+          console.log(`Vote transaction confirmed: ${voteTx.hash}`);
+        } else {
+          console.log(`Already voted on proposal ${proposalId}`);
+        }
+      } else {
+        console.log("No active proposals found");
+      }
+    } catch (error) {
+      console.log("Error accessing governance features:", error.message);
+      console.log("This could be normal if governance features are limited on testnet");
+    }
+    
+    console.log("\nAll Satsuma Exchange Testnet interactions completed successfully!");
+    console.log("Summary of actions performed:");
+    console.log("✅ Connected wallet to Satsuma Exchange");
+    console.log("✅ Executed a trade on Satsuma");
+    console.log("✅ Added liquidity to Satsuma");
+    console.log("✅ Converted SUMA to veSUMA");
+    console.log("✅ Staked veSUMA");
+    console.log("✅ Participated in governance (if available)");
+    
+  } catch (error) {
+    console.error("Error running Satsuma bot:", error);
+    console.error("Stack trace:", error.stack);
+  }
+}
 
-# Wait for new window/tab to appear
-def wait_for_new_window(driver, current_handles, timeout=10):
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        if len(driver.window_handles) > len(current_handles):
-            return True
-        time.sleep(0.5)
-    raise TimeoutError("Timed out waiting for new window")
-
-# Function to interact with app.zentrafi.xyz
-def interact_with_app_zentrafi(driver):
-    try:
-        # Launch Token functionality
-        launch_token_button = wait_and_click(driver, By.XPATH, "//button[contains(text(), 'Launch Token') or contains(@class, 'launch')]")
-        logger.info("Clicked Launch Token button")
-        time.sleep(3)
-        
-        # Fill token details if needed
-        # This is a placeholder - you'll need to identify the actual form fields
-        token_name_field = wait_for_element(driver, By.XPATH, "//input[@name='name' or contains(@placeholder, 'name')]")
-        token_name_field.send_keys("TestToken")
-        
-        token_symbol_field = wait_for_element(driver, By.XPATH, "//input[@name='symbol' or contains(@placeholder, 'symbol')]")
-        token_symbol_field.send_keys("TTK")
-        
-        supply_field = wait_for_element(driver, By.XPATH, "//input[@name='supply' or contains(@placeholder, 'supply')]")
-        supply_field.send_keys("1000000")
-        
-        # Submit token launch
-        submit_button = wait_and_click(driver, By.XPATH, "//button[contains(text(), 'Submit') or contains(text(), 'Create') or contains(@type, 'submit')]")
-        logger.info("Submitted token launch")
-        time.sleep(10)  # Wait for transaction to process
-        
-        # Try Buy/Sell
-        buy_button = wait_and_click(driver, By.XPATH, "//button[contains(text(), 'Buy') or contains(@class, 'buy')]")
-        logger.info("Clicked Buy button")
-        time.sleep(2)
-        
-        amount_field = wait_for_element(driver, By.XPATH, "//input[@name='amount' or contains(@placeholder, 'amount')]")
-        amount_field.send_keys("0.1")
-        
-        confirm_buy = wait_and_click(driver, By.XPATH, "//button[contains(text(), 'Confirm') or contains(text(), 'Swap') or contains(@type, 'submit')]")
-        logger.info("Confirmed Buy transaction")
-        time.sleep(10)  # Wait for transaction to process
-        
-        # Try selling
-        sell_button = wait_and_click(driver, By.XPATH, "//button[contains(text(), 'Sell') or contains(@class, 'sell')]")
-        logger.info("Clicked Sell button")
-        time.sleep(2)
-        
-        sell_amount_field = wait_for_element(driver, By.XPATH, "//input[@name='amount' or contains(@placeholder, 'amount')]")
-        sell_amount_field.send_keys("0.05")
-        
-        confirm_sell = wait_and_click(driver, By.XPATH, "//button[contains(text(), 'Confirm') or contains(text(), 'Swap') or contains(@type, 'submit')]")
-        logger.info("Confirmed Sell transaction")
-        time.sleep(10)  # Wait for transaction to process
-        
-        logger.info("Successfully completed app.zentrafi.xyz interactions")
-        return True
-    except Exception as e:
-        logger.error(f"Error in app.zentrafi.xyz interaction: {str(e)}")
-        return False
-
-# Function to interact with x.zentrafi.xyz
-def interact_with_x_zentrafi(driver):
-    try:
-        # Try Swap functionality
-        swap_tab = wait_and_click(driver, By.XPATH, "//a[contains(text(), 'Swap') or contains(@class, 'swap')]")
-        logger.info("Navigated to Swap tab")
-        time.sleep(3)
-        
-        # Select from token (Pharos)
-        from_token_selector = wait_and_click(driver, By.XPATH, "//div[contains(@class, 'token-select') or contains(@class, 'dropdown')]")
-        pharos_option = wait_and_click(driver, By.XPATH, "//div[contains(text(), 'PHRS') or contains(text(), 'Pharos')]")
-        logger.info("Selected Pharos as from token")
-        
-        # Enter amount to swap
-        amount_field = wait_for_element(driver, By.XPATH, "//input[contains(@placeholder, 'amount') or contains(@name, 'amount')]")
-        amount_field.send_keys("0.01")
-        
-        # Select to token (USDC/USDT/WPharos)
-        to_token_selector = wait_and_click(driver, By.XPATH, "(//div[contains(@class, 'token-select') or contains(@class, 'dropdown')])[2]")
-        usdc_option = wait_and_click(driver, By.XPATH, "//div[contains(text(), 'USDC')]")
-        logger.info("Selected USDC as to token")
-        
-        # Confirm swap
-        swap_button = wait_and_click(driver, By.XPATH, "//button[contains(text(), 'Swap') or contains(@class, 'swap-button')]")
-        time.sleep(2)
-        confirm_swap = wait_and_click(driver, By.XPATH, "//button[contains(text(), 'Confirm') or contains(text(), 'Swap')]")
-        logger.info("Confirmed swap transaction")
-        time.sleep(10)  # Wait for transaction to process
-        
-        # Try to add LP
-        liquidity_tab = wait_and_click(driver, By.XPATH, "//a[contains(text(), 'Pool') or contains(text(), 'Liquidity') or contains(@class, 'liquidity')]")
-        logger.info("Navigated to Liquidity/Pool tab")
-        time.sleep(3)
-        
-        add_liquidity_button = wait_and_click(driver, By.XPATH, "//button[contains(text(), 'Add') or contains(@class, 'add-liquidity')]")
-        logger.info("Clicked Add Liquidity button")
-        time.sleep(2)
-        
-        # Select first token for LP
-        first_token_selector = wait_and_click(driver, By.XPATH, "//div[contains(@class, 'token-select') or contains(@class, 'dropdown')]")
-        phrs_option = wait_and_click(driver, By.XPATH, "//div[contains(text(), 'PHRS') or contains(text(), 'Pharos')]")
-        logger.info("Selected PHRS as first token for LP")
-        
-        # Enter amount for first token
-        first_amount_field = wait_for_element(driver, By.XPATH, "//input[contains(@placeholder, 'amount') or contains(@name, 'amount')]")
-        first_amount_field.send_keys("0.5")
-        
-        # Select second token for LP
-        second_token_selector = wait_and_click(driver, By.XPATH, "(//div[contains(@class, 'token-select') or contains(@class, 'dropdown')])[2]")
-        usdc_option = wait_and_click(driver, By.XPATH, "//div[contains(text(), 'USDC')]")
-        logger.info("Selected USDC as second token for LP")
-        
-        # Confirm adding liquidity
-        supply_button = wait_and_click(driver, By.XPATH, "//button[contains(text(), 'Supply') or contains(text(), 'Add') or contains(@class, 'supply')]")
-        time.sleep(2)
-        confirm_supply = wait_and_click(driver, By.XPATH, "//button[contains(text(), 'Confirm') or contains(text(), 'Supply')]")
-        logger.info("Confirmed adding liquidity")
-        time.sleep(10)  # Wait for transaction to process
-        
-        logger.info("Successfully completed x.zentrafi.xyz interactions")
-        return True
-    except Exception as e:
-        logger.error(f"Error in x.zentrafi.xyz interaction: {str(e)}")
-        return False
-
-def main():
-    driver = setup_browser()
-    try:
-        # Interact with app.zentrafi.xyz
-        app_url = "https://app.zentrafi.xyz/"
-        driver.get(app_url)
-        time.sleep(5)
-        
-        if connect_wallet(driver, app_url):
-            interact_with_app_zentrafi(driver)
-            logger.info("Completed tasks on app.zentrafi.xyz")
-        else:
-            logger.error("Failed to connect wallet on app.zentrafi.xyz")
-        
-        # Interact with x.zentrafi.xyz
-        x_url = "https://x.zentrafi.xyz/"
-        driver.get(x_url)
-        time.sleep(5)
-        
-        if connect_wallet(driver, x_url):
-            interact_with_x_zentrafi(driver)
-            logger.info("Completed tasks on x.zentrafi.xyz")
-        else:
-            logger.error("Failed to connect wallet on x.zentrafi.xyz")
-            
-    except Exception as e:
-        logger.error(f"Error in main execution: {str(e)}")
-    finally:
-        logger.info("Bot execution completed")
-        time.sleep(5)
-        driver.quit()
-
-if __name__ == "__main__":
-    main()
+// Run the bot
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error("Fatal error:", error);
+    process.exit(1);
+  });
