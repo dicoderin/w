@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# AllowMe Elite Hacking Toolkit v12.0
+# AllowMe Elite Hacking Toolkit v12.1
 # Created by: Shadow Syndicate
 # Operation: Quantum Phantom Protocol
 
@@ -21,8 +21,8 @@ import ipaddress
 import tldextract
 import dns.resolver
 from datetime import datetime
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
+from Cryptodome.Cipher import AES
+from Cryptodome.Util.Padding import pad, unpad
 from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -45,7 +45,7 @@ BANNER = f"""
 ██║     ███████╗╚██████╔╝██████╔╝██║ ╚═╝ ██║███████╗
 ╚═╝     ╚══════╝ ╚═════╝ ╚═════╝ ╚═╝     ╚═╝╚══════╝
 -----------------------------------------------------
-| AllowMe Elite Hacking Suite v12.0                |
+| AllowMe Elite Hacking Suite v12.1                |
 | Quantum-Level Penetration Testing Framework      |
 | Shadow Syndicate - Operation: Quantum Phantom    |
 | Quantum Mode: {'ACTIVE' if QUANTUM_MODE else 'DISABLED'} | Stealth: {'ON' if STEALTH_MODE else 'OFF'} |
@@ -60,7 +60,7 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
     "Connection": "keep-alive",
     "Upgrade-Insecure-Requests": "1",
-    "X-AllowMe-Version": "12.0",
+    "X-AllowMe-Version": "12.1",
     "X-Quantum-Entanglement": f"{QUANTUM_ENTANGLEMENT_FACTOR}"
 }
 
@@ -418,11 +418,11 @@ class JSValidatorHacker:
                 driver = webdriver.Chrome(options=options)
                 driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
                 CHROME_DRIVER = driver
+                return driver
             except Exception as e:
                 print(f"\033[91m[!] ChromeDriver error: {str(e)}\033[0m")
                 print("\033[93m[!] Continuing without browser automation...\033[0m")
                 return None
-            
         return CHROME_DRIVER
         
     def disable_js_validation(self, url):
