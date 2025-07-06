@@ -79,7 +79,8 @@ class DataExfiltrator:
             "vulnerabilities": [],
             "endpoints": [],
             "quantum_data": {},
-            "js_bypass": {}
+            "js_bypass": {},
+            "malware_delivery": {}
         }
         
     def save_data(self):
@@ -133,6 +134,11 @@ class DataExfiltrator:
         """Add JavaScript bypass results"""
         self.collected_data["js_bypass"] = js_data
         print("[DATA] JavaScript validation bypass data captured")
+        
+    def add_malware_delivery(self, malware_data):
+        """Add malware delivery results"""
+        self.collected_data["malware_delivery"] = malware_data
+        print(f"[DATA] Malware delivery data captured: {malware_data['type']}")
         
     def capture_page_content(self, url):
         """Capture important page content"""
@@ -430,7 +436,7 @@ class CyberRecon:
         if random.random() > 0.4:
             vuln = "CVE-2025-3094: Holographic Interface RCE"
             vulns.append(vuln)
-            self.data_exfiltrator.add_vulnerability(vuln)
+            self.data_exfiltrator.add_vulnerability(vunln)
             
         if random.random() > 0.6:
             vuln = "CVE-2025-3400: Quantum Cloud Escape Vulnerability"
@@ -1054,6 +1060,192 @@ class ZeroDayOrchestrator:
         print("    \033[92m✓ Holographic persistence established\033[0m")
         self.data_exfiltrator.add_vulnerability("Holographic Implant Deployed")
 
+# Malware Delivery System
+class MalwareInjector:
+    def __init__(self, target, ip, data_exfiltrator):
+        self.target = target
+        self.ip = ip
+        self.data_exfiltrator = data_exfiltrator
+        self.session = requests.Session()
+        self.session.headers.update(HEADERS)
+        
+    def deliver_fleeceware(self):
+        """Simulate Fleeceware malware delivery"""
+        print("\n[+] Deploying Fleeceware malware via quantum channels...")
+        
+        # Simulated delivery methods
+        methods = [
+            "Compromised third-party libraries",
+            "Fake subscription services",
+            "Malicious browser extensions",
+            "Quantum-entangled ad networks"
+        ]
+        
+        # Simulated results
+        if random.random() > 0.5:
+            result = {
+                "type": "Fleeceware",
+                "status": "SUCCESS",
+                "method": random.choice(methods),
+                "infection_rate": f"{random.randint(70, 95)}%",
+                "revenue_model": "Recurring hidden charges",
+                "persistence": "Browser-based crypto-mining"
+            }
+            print("  \033[92m!!! Fleeceware successfully deployed!\033[0m")
+        else:
+            result = {
+                "type": "Fleeceware",
+                "status": "FAILED",
+                "reason": "Quantum security protocols detected"
+            }
+            print("  \033[91mFleeceware deployment blocked\033[0m")
+            
+        self.data_exfiltrator.add_malware_delivery(result)
+        return result
+        
+    def deliver_notpetya(self):
+        """Simulate NotPetya ransomware delivery"""
+        print("\n[+] Weaponizing NotPetya ransomware for quantum deployment...")
+        
+        # Simulated attack vectors
+        vectors = [
+            "Compromised software update",
+            "Quantum-exploited EternalBlue",
+            "Spear-phishing with holographic attachments",
+            "Supply chain attack via quantum backdoor"
+        ]
+        
+        # Simulated results
+        if random.random() > 0.6:
+            result = {
+                "type": "NotPetya",
+                "status": "SUCCESS",
+                "vector": random.choice(vectors),
+                "encryption_strength": "AES-128 + RSA-2048",
+                "worm_capability": "True",
+                "destruction_level": "Critical"
+            }
+            print("  \033[92m!!! NotPetya successfully deployed! System encryption in progress...\033[0m")
+        else:
+            result = {
+                "type": "NotPetya",
+                "status": "FAILED",
+                "reason": "Quantum-resistant boot sector detected"
+            }
+            print("  \033[91mNotPetya deployment neutralized\033[0m")
+            
+        self.data_exfiltrator.add_malware_delivery(result)
+        return result
+        
+    def deliver_raas(self):
+        """Simulate Ransomware-as-a-Service delivery"""
+        print("\n[+] Activating Ransomware-as-a-Service platform...")
+        
+        # Simulated RaaS features
+        features = [
+            "Quantum-proof encryption",
+            "Auto-propagation module",
+            "TOR-based payment portal",
+            "Victim management dashboard"
+        ]
+        
+        result = {
+            "type": "Ransomware-as-a-Service (RaaS)",
+            "status": "OPERATIONAL",
+            "infection_rate": f"{random.randint(50, 85)}%",
+            "features": features,
+            "payment_currency": "Monero (XMR)",
+            "affiliate_cut": "70%"
+        }
+        
+        print("  \033[92m!!! RaaS platform online! Affiliates can now deploy ransomware\033[0m")
+        self.data_exfiltrator.add_malware_delivery(result)
+        return result
+        
+    def deliver_clop_ransomware(self):
+        """Simulate Clop ransomware delivery"""
+        print("\n[+] Deploying Clop ransomware with quantum obfuscation...")
+        
+        # Simulated techniques
+        techniques = [
+            "Quantum file encryption",
+            "Data exfiltration before encryption",
+            "Holographic ransom note",
+            "Double extortion mechanism"
+        ]
+        
+        if random.random() > 0.4:
+            result = {
+                "type": "Clop Ransomware",
+                "status": "SUCCESS",
+                "techniques": techniques,
+                "files_encrypted": f"{random.randint(1000, 50000)}",
+                "data_exfiltrated": "450 GB",
+                "ransom_amount": "10 BTC"
+            }
+            print("  \033[92m!!! Clop ransomware deployed! Critical files encrypted...\033[0m")
+        else:
+            result = {
+                "type": "Clop Ransomware",
+                "status": "FAILED",
+                "reason": "Quantum behavioral analysis detected encryption patterns"
+            }
+            print("  \033[91mClop deployment blocked by AI security\033[0m")
+            
+        self.data_exfiltrator.add_malware_delivery(result)
+        return result
+        
+    def deliver_cryptojacking(self):
+        """Simulate cryptojacking malware delivery"""
+        print("\n[+] Injecting cryptojacking script via quantum tunneling...")
+        
+        # Simulated mining techniques
+        techniques = [
+            "Browser-based Monero mining",
+            "Cloud resource hijacking",
+            "Quantum-accelerated crypto mining",
+            "IoT device exploitation"
+        ]
+        
+        if random.random() > 0.3:
+            result = {
+                "type": "Cryptojacking",
+                "status": "SUCCESS",
+                "method": "Web-based JavaScript miner",
+                "cryptocurrency": "Monero (XMR)",
+                "hash_rate": f"{random.randint(50, 150)} H/s per victim",
+                "estimated_revenue": "$1,200/month"
+            }
+            print("  \033[92m!!! Cryptojacking script active! Resources being mined...\033[0m")
+        else:
+            result = {
+                "type": "Cryptojacking",
+                "status": "FAILED",
+                "reason": "Quantum resource monitoring detected abnormal CPU usage"
+            }
+            print("  \033[91mCryptojacking script blocked\033[0m")
+            
+        self.data_exfiltrator.add_malware_delivery(result)
+        return result
+        
+    def execute_malware_attack(self, malware_type):
+        """Execute specific malware attack based on type"""
+        malware_type = malware_type.lower().strip()
+        
+        if malware_type == "fleeceware":
+            return self.deliver_fleeceware()
+        elif malware_type == "notpetya":
+            return self.deliver_notpetya()
+        elif malware_type == "raas":
+            return self.deliver_raas()
+        elif malware_type == "clop":
+            return self.deliver_clop_ransomware()
+        elif malware_type == "cryptojacking":
+            return self.deliver_cryptojacking()
+        else:
+            print(f"\033[91m[!] Unknown malware type: {malware_type}\033[0m")
+            return {"error": "Unknown malware type"}
+
 # Main Toolkit
 class AllowMeHackingSuite:
     def __init__(self):
@@ -1085,6 +1277,30 @@ class AllowMeHackingSuite:
             except Exception as e:
                 print(f"\033[91m[!] Error: {str(e)}\033[0m")
 
+    def select_malware(self):
+        """Prompt user to select malware type"""
+        print("\n" + "="*50)
+        print(" QUANTUM MALWARE SELECTION ".center(50, "="))
+        print("="*50)
+        
+        malware_options = {
+            "1": "Fleeceware",
+            "2": "NotPetya",
+            "3": "Ransomware as a Service (RaaS)",
+            "4": "Clop Ransomware",
+            "5": "Cryptojacking"
+        }
+        
+        print("\n[+] Select malware type to deploy:")
+        for num, name in malware_options.items():
+            print(f"  {num}. {name}")
+            
+        while True:
+            choice = input("\n[\033[93m?\033[0m] Enter malware number: ").strip()
+            if choice in malware_options:
+                return malware_options[choice]
+            print("\033[91m[!] Invalid selection. Try again.\033[0m")
+            
     def run(self):
         print(self.art)
         print("[\033[94m*\033[0m] Initializing quantum stealth protocol...")
@@ -1096,6 +1312,16 @@ class AllowMeHackingSuite:
         
         # Get target from user
         self.get_target()
+        
+        # Select malware type
+        malware_type = self.select_malware()
+        
+        # Initialize malware injector
+        injector = MalwareInjector(self.target, self.ip, self.data_exfiltrator)
+        
+        # Deploy selected malware
+        print(f"\n[+] Preparing {malware_type} deployment...")
+        malware_result = injector.execute_malware_attack(malware_type)
         
         # Reconnaissance
         print("\n" + "="*50)
@@ -1132,7 +1358,7 @@ class AllowMeHackingSuite:
         orchestrator = ZeroDayOrchestrator(self.target, self.ip, self.data_exfiltrator)
         mission_data = orchestrator.execute_phantom_protocol()
         
-        # Add JS exploitation results to mission data
+        # Add JS exploitation and malware results to mission data
         mission_data["js_validation_bypass"] = {
             "status": "SUCCESS",
             "quantum_credentials": quantum_creds,
@@ -1145,6 +1371,7 @@ class AllowMeHackingSuite:
                 "Automatic Form Submission"
             ]
         }
+        mission_data["malware_deployment"] = malware_result
         
         # Save all collected data
         print("\n" + "="*50)
