@@ -1,4 +1,0 @@
-selenium
-web3
-python-dotenv
-eth-account
